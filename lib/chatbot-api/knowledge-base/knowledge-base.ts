@@ -44,6 +44,8 @@ export class KnowledgeBaseStack extends cdk.Stack {
       actions: [
         's3:*'
       ],
+      // restrict access to the current folder in the bucket
+      //resources: [props.s3bucket.bucketArn, props.s3bucket.bucketArn + "/current/*"]
       resources: [props.s3bucket.bucketArn, props.s3bucket.bucketArn + "/*"]
     }));
 

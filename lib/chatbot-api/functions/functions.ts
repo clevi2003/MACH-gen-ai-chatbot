@@ -1,12 +1,17 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+
 
 // Import Lambda L2 construct
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as s3_notifications from "aws-cdk-lib/aws-s3-notifications";
 import * as bedrock from "aws-cdk-lib/aws-bedrock";
 
 interface LambdaFunctionStackProps {  
@@ -27,9 +32,11 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly getS3Function : lambda.Function;
   public readonly uploadS3Function : lambda.Function;
   public readonly syncKBFunction : lambda.Function;
+  public readonly onetDataPullFunction : lambda.Function;
+  public readonly blsDataTransformFunction : lambda.Function;
 
   constructor(scope: Construct, id: string, props: LambdaFunctionStackProps) {
-    super(scope, id);    
+    super(scope, id); 
 
     const sessionAPIHandlerFunction = new lambda.Function(scope, 'SessionHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
@@ -208,5 +215,97 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.uploadS3Function = uploadS3APIHandlerFunction;
 
+    // define secret to store O*NET API key
+    const onetApiKeySecret = secretsmanager.Secret.fromSecretNameV2(this, 'OnetApiKey', 'ONET_API_Credentials');
+    //const onetApiKeySecret = new secretsmanager.Secret(this, 'OnetApiKey', {
+    //  secretName: 'ONET_API_Credentials',
+    //  description: 'Credentials for O*NET API',
+    //  removalPolicy: cdk.RemovalPolicy.DESTROY
+    //});
+
+    const onetDataPullHandlerFunction = new lambda.Function(scope, 'OnetDataPullHandlerFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'onet-data-pull')), // Points to the lambda directory
+      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "BUCKET" : props.knowledgeBucket.bucketName, 
+        "SECRET_NAME" : 'ONET_API_Credentials', //onetApiKeySecret.secretName,       
+      },
+      timeout: cdk.Duration.seconds(900)
+    });
+    // add IAM policy to allow access to S3 bucket
+    onetDataPullHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        's3:*'
+      ],
+      resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
+    }));
+    // give lambda function access to the secret
+    // onetApiKeySecret.grantRead(onetDataPullHandlerFunction);
+    // give lambda function IAM access to secret
+    const secretArn = `arn:aws:secretsmanager:${this.region}:${this.account}:secret:ONET_API_Credentials-*`;
+    onetDataPullHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'secretsmanager:GetSecretValue',
+        'secretsmanager:DescribeSecret'
+      ],
+      // resources: [onetApiKeySecret.secretArn]
+      resources: [secretArn]
+    }));
+    this.onetDataPullFunction = onetDataPullHandlerFunction;
+
+    // create EventBridge rule to trigger data pull twice a year
+    const onetDataPullScheduleRule = new events.Rule(this, 'OnetDataPullScheduleRule', {
+      schedule: events.Schedule.cron({
+        minute: '0',
+        hour: '0',
+        month: '1,7',
+        year: '*',
+        weekDay: 'MON'
+      }),
+      description: 'Schedule to pull data from O*NET API twice a year'
+    });
+    // add lambda function as target to the rule
+    onetDataPullScheduleRule.addTarget(new targets.LambdaFunction(this.onetDataPullFunction));
+
+    // add lambda function to transform bls data and put transformed data in current folder
+    const blsDataTransformHandlerFunction = new lambda.Function(scope, 'BlsDataTransformHandlerFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'bls-data-transform'), // Points to the lambda directory
+      {
+        bundling: {
+          image: lambda.Runtime.PYTHON_3_12.bundlingImage,
+          command: [
+            'bash', '-c',
+            'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+          ],
+        },
+      }),
+      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "BUCKET" : props.knowledgeBucket.bucketName,        
+      },
+      timeout: cdk.Duration.seconds(300)
+    });
+
+    blsDataTransformHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        's3:*'
+      ],
+      resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
+    }));
+
+    this.blsDataTransformFunction = blsDataTransformHandlerFunction;
+
+    // Add S3 event notification to trigger Lambda function when the marker file is uploaded
+    props.knowledgeBucket.addEventNotification(s3.EventType.OBJECT_CREATED, 
+      new s3_notifications.LambdaDestination(this.blsDataTransformFunction), {
+        prefix: 'raw/bls_data_v',
+        suffix: 'process.trigger' 
+      }
+    );
   }
 }

@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from "constructs";
 
 export class S3BucketStack extends cdk.Stack {
@@ -31,6 +32,25 @@ export class S3BucketStack extends cdk.Stack {
         allowedOrigins: ['*'], 
         allowedHeaders: ["*"]     
       }]
+    });
+    // Create initial folders in the bucket for archived, current, raw, and processed data
+    this.createInitialFolders(this.knowledgeBucket, ['archive/', 'current/', 'raw/', 'processed/']);
+  }
+  private createInitialFolders(bucket: s3.Bucket, folderPaths: string[]) {
+    folderPaths.forEach(folder => {
+      new cr.AwsCustomResource(this, `S3Folder${folder.replace('/', '')}`, {
+        onCreate: {
+          service: 'S3',
+          action: 'putObject',
+          parameters: {
+            Bucket: bucket.bucketName,
+            Key: folder,  // Adding a trailing slash to simulate a folder
+            Body: '',     // Empty content
+          },
+          physicalResourceId: cr.PhysicalResourceId.of(`S3Folder${folder}`),
+        },
+        policy: cr.AwsCustomResourcePolicy.fromSdkCalls({ resources: [bucket.bucketArn] })
+      });
     });
   }
 }
