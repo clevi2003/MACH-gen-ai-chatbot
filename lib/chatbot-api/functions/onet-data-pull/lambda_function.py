@@ -4,8 +4,8 @@ import json
 import requests
 import xml.etree.ElementTree as ET
 from requests.auth import HTTPBasicAuth
-#import re
-from helpers import get_next_version, save_to_s3
+import re
+#from helpers import get_next_version, save_to_s3
 
 
 def lambda_handler(event, context):
@@ -23,9 +23,9 @@ def lambda_handler(event, context):
     # Define S3 parameters
     bucket_name = os.environ['BUCKET']
     # get next version number for the key
-    version = get_next_version(s3, bucket_name, 'processed/onet_data/', r'occupations_overview_v(\d+)\.json')
-    s3_key_versioned = f'processed/onet_data/occupations_overview_v{version}.json'
-    s3_key_current = 'current/onet_data/occupations_overview.json'
+    version = get_next_version(s3, bucket_name, 'processed/onet_career_data/', r'occupations_overview_v(\d+)\.json')
+    s3_key_versioned = f'processed/onet_career_data/occupations_overview_v{version}.json'
+    s3_key_current = 'current/onet_career_data/occupations_overview.json'
 
     # Define O*NET API parameters
     base_url = 'https://services.onetcenter.org/ws/'
@@ -94,7 +94,7 @@ def lambda_handler(event, context):
         'body': json.dumps('O*NET data pull completed.')
     }
 
-"""
+
 def save_to_s3(s3, bucket_name, s3_key, data):
     s3.put_object(
         Bucket=bucket_name,
@@ -102,7 +102,7 @@ def save_to_s3(s3, bucket_name, s3_key, data):
         Body=json.dumps(data),
         ContentType='application/json'
     )
-"""
+
 
 def fetch_career_details(career_href, username, password):
     response = requests.get(
@@ -133,9 +133,9 @@ def fetch_career_details(career_href, username, password):
         print(f"Error fetching details for {career_href}: {response.status_code}")
         return {}
     
-"""    
-def get_next_version(s3, bucket_name, prefix):
-    # List objects in the 'onet_data/' folder
+    
+def get_next_version(s3, bucket_name, prefix, pattern):
+    # List objects in the 'onet_career_data/' folder
     response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
 
     version = 1
@@ -146,7 +146,7 @@ def get_next_version(s3, bucket_name, prefix):
         for obj in response['Contents']:
             key = obj['Key']
             # Look for files named occupations_overview_vX.json
-            match = re.search(r'occupations_overview_v(\d+)\.json', key)
+            match = re.search(pattern, key)
             if match:
                 versions.append(int(match.group(1)))
 
@@ -155,4 +155,3 @@ def get_next_version(s3, bucket_name, prefix):
             version = max(versions) + 1
 
     return str(version)
-"""
