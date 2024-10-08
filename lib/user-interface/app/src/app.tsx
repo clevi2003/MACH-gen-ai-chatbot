@@ -15,6 +15,7 @@ import UserFeedbackPage from "./pages/admin/user-feedback-page";
 import SessionPage from "./pages/chatbot/sessions/sessions"
 import { v4 as uuidv4 } from "uuid";
 import "./styles/app.scss";
+import InterestTest from "./pages/chatbot/interest-test/interest-test";
 
 function App() {
   const appContext = useContext(AppContext);
@@ -34,7 +35,8 @@ function App() {
             />            
             <Route path="/chatbot" element={<Outlet />}>
               <Route path="playground/:sessionId" element={<Playground />} />
-              <Route path="sessions" element={<SessionPage />} />              
+              <Route path="sessions" element={<SessionPage />} /> 
+              <Route path="interest-test/:sessionId" element={<InterestTest />} /> {/* New Route */}  // new             
             </Route>
             <Route path="/admin" element={<Outlet />}>                 
              <Route path="data" element={<DataPage />} />   
@@ -49,3 +51,4 @@ function App() {
 }
 
 export default App;
+ 

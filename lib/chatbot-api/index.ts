@@ -16,6 +16,7 @@ import { aws_apigatewayv2 as apigwv2 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { OpenSearchStack } from "./opensearch/opensearch";
 import { KnowledgeBaseStack } from "./knowledge-base/knowledge-base"
+import { LambdaLayerStack } from "../layers";
 
 // import { NagSuppressions } from "cdk-nag";
 
@@ -46,6 +47,8 @@ export class ChatBotApi extends Construct {
     const websocketBackend = new WebsocketBackendAPI(this, "WebsocketBackend", {})
     this.wsAPI = websocketBackend;
 
+    //const lambdaLayer = new LambdaLayerStack(this, "LambdaLayerStack")
+
     const lambdaFunctions = new LambdaFunctionStack(this, "LambdaFunctions",
       {
         wsApiEndpoint: websocketBackend.wsAPIStage.url,
@@ -54,7 +57,8 @@ export class ChatBotApi extends Construct {
         feedbackBucket: buckets.feedbackBucket,
         knowledgeBucket: buckets.knowledgeBucket,
         knowledgeBase: knowledgeBase.knowledgeBase,
-        knowledgeBaseSource : knowledgeBase.dataSource,
+        knowledgeBaseSource: knowledgeBase.dataSource,
+        //layer: lambdaLayer.layer,
 
       })
 
@@ -246,4 +250,4 @@ export class ChatBotApi extends Construct {
     //   },
     // ]);
   }
-}
+} 

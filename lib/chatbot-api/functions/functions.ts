@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-
+//import { LambdaLayerStack } from '../../layers/index';
 
 // Import Lambda L2 construct
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -34,9 +34,14 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly syncKBFunction : lambda.Function;
   public readonly onetDataPullFunction : lambda.Function;
   public readonly blsDataTransformFunction : lambda.Function;
+  public readonly ossUpdateIndexFunction : lambda.Function;
+  public readonly kbSyncWrapperFunction : lambda.Function;
 
   constructor(scope: Construct, id: string, props: LambdaFunctionStackProps) {
-    super(scope, id); 
+    super(scope, id);
+    
+    //const layer = new LambdaLayerStack(this, 'LambdaLayerStack');
+    //this.layer = layer;
 
     const sessionAPIHandlerFunction = new lambda.Function(scope, 'SessionHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
@@ -99,6 +104,16 @@ export class LambdaFunctionStack extends cdk.Stack {
             'lambda:InvokeFunction'
           ],
           resources: [this.sessionFunction.functionArn]
+        }));
+        // give permission for cloudwatch to log the function
+        websocketAPIFunction.addToRolePolicy(new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents'
+          ],
+          resources: ["arn:aws:logs:region:account-id:log-group:/aws/lambda/your-function-name:*"]
         }));
         
         this.chatFunction = websocketAPIFunction;
@@ -175,14 +190,15 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.getS3Function = getS3APIHandlerFunction;
 
-
     const kbSyncAPIHandlerFunction = new lambda.Function(scope, 'SyncKBHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
       code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/kb-sync')), // Points to the lambda directory
       handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
       environment: {
         "KB_ID" : props.knowledgeBase.attrKnowledgeBaseId,      
-        "SOURCE" : props.knowledgeBaseSource.attrDataSourceId  
+        "SOURCE" : props.knowledgeBaseSource.attrDataSourceId,
+        "TRIGGER_BUCKET" : props.knowledgeBucket.bucketName,  
+        "TRIGGER_KEY" : "triggers/aoss_sync.trigger"
       },
       timeout: cdk.Duration.seconds(30)
     });
@@ -195,6 +211,25 @@ export class LambdaFunctionStack extends cdk.Stack {
       resources: [props.knowledgeBase.attrKnowledgeBaseArn]
     }));
     this.syncKBFunction = kbSyncAPIHandlerFunction;
+
+    // add S3 notification so index update function is triggered by triggers/aoss_sync.trigger
+    //props.knowledgeBucket.addEventNotification(s3.EventType.OBJECT_CREATED, 
+    //  new s3_notifications.LambdaDestination(ossUpdateIndexFunction), {
+    //    prefix: 'triggers',
+    //    suffix: 'aoss_sync.trigger' 
+    //  }
+    //);
+
+    //const ossUpdateIndexAPIHandlerFunction = new lambda.Function(scope, 'OSSUpdateIndexHandlerFunction', {
+    //  runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+    //  code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/oss-update-index')), // Points to the lambda directory
+    //  handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+    //  environment: {
+    //    "KB_ID" : props.knowledgeBase.attrKnowledgeBaseId,      
+    //    "SOURCE" : props.knowledgeBaseSource.attrDataSourceId
+    //  },
+    //  timeout: cdk.Duration.seconds(30)
+    //});
 
     const uploadS3APIHandlerFunction = new lambda.Function(scope, 'UploadS3FilesHandlerFunction', {
       runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
@@ -231,7 +266,8 @@ export class LambdaFunctionStack extends cdk.Stack {
         "BUCKET" : props.knowledgeBucket.bucketName, 
         "SECRET_NAME" : 'ONET_API_Credentials', //onetApiKeySecret.secretName,       
       },
-      timeout: cdk.Duration.seconds(900)
+      timeout: cdk.Duration.seconds(900),
+      //layers: [props.layer]
     });
     // add IAM policy to allow access to S3 bucket
     onetDataPullHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
@@ -267,27 +303,31 @@ export class LambdaFunctionStack extends cdk.Stack {
       }),
       description: 'Schedule to pull data from O*NET API twice a year'
     });
+    // give eventbridge rule access to invoke lambda function
+    onetDataPullHandlerFunction.grantInvoke
+
     // add lambda function as target to the rule
     onetDataPullScheduleRule.addTarget(new targets.LambdaFunction(this.onetDataPullFunction));
 
     // add lambda function to transform bls data and put transformed data in current folder
     const blsDataTransformHandlerFunction = new lambda.Function(scope, 'BlsDataTransformHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
-      code: lambda.Code.fromAsset(path.join(__dirname, 'bls-data-transform'), // Points to the lambda directory
-      {
-        bundling: {
-          image: lambda.Runtime.PYTHON_3_12.bundlingImage,
-          command: [
-            'bash', '-c',
-            'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
-          ],
-        },
-      }),
+      code: lambda.Code.fromAsset(path.join(__dirname, 'bls-data-transform')), // Points to the lambda directory
+      //{
+      //  bundling: {
+      //    image: lambda.Runtime.PYTHON_3_12.bundlingImage,
+      //    command: [
+      //      'bash', '-c',
+      //      'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+      //    ],
+      //  },
+      //}),
       handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
       environment: {
         "BUCKET" : props.knowledgeBucket.bucketName,        
       },
-      timeout: cdk.Duration.seconds(300)
+      timeout: cdk.Duration.seconds(300),
+      //layers: [props.layer]
     });
 
     blsDataTransformHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
@@ -305,6 +345,36 @@ export class LambdaFunctionStack extends cdk.Stack {
       new s3_notifications.LambdaDestination(this.blsDataTransformFunction), {
         prefix: 'raw/bls_data_v',
         suffix: 'process.trigger' 
+        //prefix: "triggers/",
+        //suffix: "bls_data_transform.trigger"
+      }
+    );
+
+    // add lambda function wrapper to trigger kb sync after onet and bls S3 data uploads
+    // Define the wrapper Lambda function
+    const kbSyncWrapperFunction = new lambda.Function(scope, 'KBSyncWrapperFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/kb-sync-trigger')), // Path to your wrapper function code
+      handler: 'lambda_function.lambda_handler',
+      environment: {
+        'SYNC_FUNCTION_NAME': this.syncKBFunction.functionName, // Pass the name of the sync function
+      },
+      timeout: cdk.Duration.seconds(30),
+    });
+    // grant the wrapper function permission to invoke the sync function
+    kbSyncWrapperFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'lambda:InvokeFunction',
+      ],
+      resources: [this.syncKBFunction.functionArn],
+    }));
+    this.kbSyncWrapperFunction = kbSyncWrapperFunction;
+    // add S3 event notification for when anything is added to current folder
+    props.knowledgeBucket.addEventNotification(s3.EventType.OBJECT_CREATED, 
+      new s3_notifications.LambdaDestination(this.kbSyncWrapperFunction), {
+        prefix: 'current/',
+        suffix: ''
       }
     );
   }

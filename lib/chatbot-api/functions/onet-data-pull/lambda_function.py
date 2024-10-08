@@ -24,8 +24,8 @@ def lambda_handler(event, context):
     bucket_name = os.environ['BUCKET']
     # get next version number for the key
     version = get_next_version(s3, bucket_name, 'processed/onet_career_data/', r'occupations_overview_v(\d+)\.json')
-    s3_key_versioned = f'processed/onet_career_data/occupations_overview_v{version}.json'
-    s3_key_current = 'current/onet_career_data/occupations_overview.json'
+    s3_key_versioned = f'processed/onet_career_data/occupations_overview_v{version}.txt'
+    s3_key_current = 'current/onet_career_data/occupations_overview.txt'
 
     # Define O*NET API parameters
     base_url = 'https://services.onetcenter.org/ws/'
@@ -34,7 +34,7 @@ def lambda_handler(event, context):
     start = 1
     end = 100
     total_records = None
-    all_careers = []
+    all_careers = ""
 
     while True:
         params = {
@@ -60,19 +60,20 @@ def lambda_handler(event, context):
 
             # Iterate over each career element
             for career in root.findall('career'):
-                career_data = {}
-                career_data['code'] = career.find('code').text
-                career_data['title'] = career.find('title').text
-
-                # Extract tags
+                career_str = career.find('title').text
                 tags = career.find('tags').attrib
-                career_data['tags'] = tags
-
-                # Fetch detailed data using the href
+                outlook = tags['bright_outlook']
+                if outlook:
+                    outlook = "have a bright outlook."
+                else:
+                    outlook = "do not have a bright outlook."
                 career_href = career.attrib['href']
                 detailed_data = fetch_career_details(career_href, username, password)
-                career_data.update(detailed_data)
-                all_careers.append(career_data)
+                career_str += ", also known as " + ", ".join(detailed_data['also_called']) + ", " + outlook
+                career_str += " People in this career do the following: " + ";".join(detailed_data['what_they_do'])
+                career_str += " People in this career typically perform the following on the job tasks: " + ";".join(detailed_data['on_the_job_tasks'])
+
+                all_careers += career_str + "\n"
 
             # Update start and end for next iteration
             start = end + 1

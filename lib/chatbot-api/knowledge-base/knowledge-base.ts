@@ -45,8 +45,8 @@ export class KnowledgeBaseStack extends cdk.Stack {
         's3:*'
       ],
       // restrict access to the current folder in the bucket
-      //resources: [props.s3bucket.bucketArn, props.s3bucket.bucketArn + "/current/*"]
-      resources: [props.s3bucket.bucketArn, props.s3bucket.bucketArn + "/*"]
+      resources: [props.s3bucket.bucketArn, props.s3bucket.bucketArn + "/current/*"]
+      //resources: [props.s3bucket.bucketArn, props.s3bucket.bucketArn + "/*"]
     }));
 
     // add bedrock access to the role
