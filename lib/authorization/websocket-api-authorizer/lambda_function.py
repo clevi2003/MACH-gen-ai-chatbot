@@ -53,11 +53,12 @@ def lambda_handler(event, context):
                 
         principalId = claims['sub']
         role = claims.get('custom:role','')
+        institution = claims.get('custom:institution','')
 
         # Generate policy document
         policy_document = {
             'principalId': principalId,
-            'context' : {"role" : role},
+            'context' : {"role" : role, "institution": institution},
             'policyDocument': {
                 'Version': '2012-10-17',
                 'Statement': [{

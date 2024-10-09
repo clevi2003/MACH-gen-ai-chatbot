@@ -40,9 +40,9 @@ export default function UserFeedbackPage() {
         const admin = result?.signInUserSession?.idToken?.payload["custom:role"]
         if (admin) {
           const data = JSON.parse(admin);
-          if (data.includes("Admin")) {
+          if (data.includes("Admin") || data.includes("MasterAdmin")) {
             setAdmin(true);
-          }
+          } 
         }
       }
       catch (e){

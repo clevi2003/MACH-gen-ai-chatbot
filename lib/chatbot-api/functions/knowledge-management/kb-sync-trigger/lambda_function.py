@@ -16,7 +16,7 @@ def lambda_handler(event, context):
             'authorizer': {
                 'jwt': {
                     'claims': {
-                        'custom:role': json.dumps(['Admin'])
+                        'custom:role': json.dumps(['MasterAdmin'])
                     }
                 }
             }
