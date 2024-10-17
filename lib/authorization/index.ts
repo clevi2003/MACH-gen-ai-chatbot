@@ -30,7 +30,8 @@ export class AuthorizationStack extends Construct {
         email: true,
       },
       customAttributes : {
-        'role' : new cognito.StringAttribute({ minLen: 0, maxLen: 30, mutable: true })
+        'role' : new cognito.StringAttribute({ minLen: 0, maxLen: 30, mutable: true }),
+        'institution' : new cognito.StringAttribute({ minLen: 0, maxLen: 50, mutable: true })
       }
       // ... other user pool configurations
     });

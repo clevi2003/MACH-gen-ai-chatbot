@@ -115,7 +115,15 @@ export class LambdaFunctionStack extends cdk.Stack {
           ],
           resources: ["arn:aws:logs:region:account-id:log-group:/aws/lambda/your-function-name:*"]
         }));
-        
+        //give permission for comprehend and translate to be used by the function
+        websocketAPIFunction.addToRolePolicy(new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'comprehend:*',
+            'translate:*'
+          ],
+          resources: ["*"]
+        }));
         this.chatFunction = websocketAPIFunction;
 
     const feedbackAPIHandlerFunction = new lambda.Function(scope, 'FeedbackHandlerFunction', {

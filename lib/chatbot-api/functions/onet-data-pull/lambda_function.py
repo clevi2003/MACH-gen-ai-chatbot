@@ -5,8 +5,11 @@ import requests
 import xml.etree.ElementTree as ET
 from requests.auth import HTTPBasicAuth
 import re
-#from helpers import get_next_version, save_to_s3
+import logging
 
+# setup logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     # Initialize AWS clients
@@ -69,6 +72,8 @@ def lambda_handler(event, context):
                     outlook = "do not have a bright outlook."
                 career_href = career.attrib['href']
                 detailed_data = fetch_career_details(career_href, username, password)
+                if detailed_data['status_code'] != 200:
+                    return detailed_data
                 career_str += ", also known as " + ", ".join(detailed_data['also_called']) + ", " + outlook
                 career_str += " People in this career do the following: " + ";".join(detailed_data['what_they_do'])
                 career_str += " People in this career typically perform the following on the job tasks: " + ";".join(detailed_data['on_the_job_tasks'])
@@ -83,9 +88,12 @@ def lambda_handler(event, context):
             if start > total_records:
                 break
         else:
-            # Log error and exit loop
-            print(f"Error: {response.status_code} - {response.text}")
-            break
+            # Log error
+            logger.error(f"Error: {response.status_code} - {response.text}")
+            return {
+                'statusCode': 500,
+                'body': json.dumps('Error fetching O*NET data.')
+            }
     # save versioned data in processed folder and most recent in current folder
     save_to_s3(s3, bucket_name, s3_key_versioned, all_careers)
     save_to_s3(s3, bucket_name, s3_key_current, all_careers)
@@ -116,6 +124,7 @@ def fetch_career_details(career_href, username, password):
         root = ET.fromstring(response.content)
 
         detailed_data = {}
+        detailed_data["status_code"] = response.status_code
 
         # Extract 'also_called' titles
         also_called = [title.text for title in root.findall('also_called/title')]
@@ -131,8 +140,11 @@ def fetch_career_details(career_href, username, password):
 
         return detailed_data
     else:
-        print(f"Error fetching details for {career_href}: {response.status_code}")
-        return {}
+        logger.error(f"Error fetching details for {career_href}: {response.status_code}")
+        return {
+                'statusCode': 500,
+                'body': json.dumps('Error fetching O*NET data.')
+            }
     
     
 def get_next_version(s3, bucket_name, prefix, pattern):
