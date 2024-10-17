@@ -14,7 +14,7 @@ dynamodb = boto3.resource("dynamodb", region_name='us-east-1')
 table = dynamodb.Table(DDB_TABLE_NAME)
 
 # Define a function to add a session or update an existing one in the DynamoDB table
-def add_session(session_id, user_id, chat_history, title, new_chat_entry):
+def add_session(session_id, user_id, chat_history, title, new_chat_entry, language_code="en"):
     try:
         # Attempt to add an item to the DynamoDB table with provided details
         response = table.put_item(
@@ -23,7 +23,8 @@ def add_session(session_id, user_id, chat_history, title, new_chat_entry):
                 'session_id': session_id,  # Unique identifier for the session
                 'chat_history': [new_chat_entry],  # List of chat history, initiating with the new entry
                 "title": title.strip(),  # Title of the session
-                "time_stamp": str(datetime.now())  # Current timestamp as a string
+                "time_stamp": str(datetime.now()),  # Current timestamp as a string
+                "language_code": language_code  # Language code for the session
             }
         )
         # Return any attributes returned by the DynamoDB operation, default to an empty dictionary if none
@@ -80,7 +81,7 @@ def get_session(session_id, user_id):
     return response_to_client
 
             
-def update_session(session_id, user_id, new_chat_entry):
+def update_session(session_id, user_id, new_chat_entry, language_code=None):
     try:
         # Fetch current session details
         session_response = get_session(session_id, user_id)
@@ -95,11 +96,19 @@ def update_session(session_id, user_id, new_chat_entry):
         # Append the new chat entry to the existing chat history
         updated_chat_history = current_chat_history + [new_chat_entry]
         
+        # Build update expression
+        update_expression = "set chat_history = :chat_history"
+        expression_attribute_values = {":chat_history": updated_chat_history}
+
+        if language_code:
+            update_expression += ", languageCode = :languageCode"
+            expression_attribute_values[":languageCode"] = language_code
+        
         # Update the item in DynamoDB
         response = table.update_item(
             Key={"session_id": session_id, "user_id": user_id},
-            UpdateExpression="set chat_history = :chat_history",
-            ExpressionAttributeValues={":chat_history": updated_chat_history},
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expression_attribute_values,
             ReturnValues="UPDATED_NEW"
         )
         return {
@@ -262,17 +271,18 @@ def lambda_handler(event, context):
     chat_history = data.get('chat_history', None)
     new_chat_entry = data.get('new_chat_entry')
     title = data.get('title', f"Chat on {str(datetime.now())}")
+    language_code = data.get('language_code', 'en')
     if operation != 'list_sessions_by_user_id':
         print(operation)
     print(data)
     print(new_chat_entry)
 
     if operation == 'add_session':
-        return add_session(session_id, user_id, chat_history, title, new_chat_entry)
+        return add_session(session_id, user_id, chat_history, title, new_chat_entry, language_code)
     elif operation == 'get_session':
         return get_session(session_id, user_id)
     elif operation == 'update_session':
-        return update_session(session_id, user_id, new_chat_entry)
+        return update_session(session_id, user_id, new_chat_entry, language_code)
     elif operation == 'list_sessions_by_user_id':
         return list_sessions_by_user_id(user_id)
     elif operation == 'list_all_sessions_by_user_id':

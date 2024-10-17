@@ -105,14 +105,24 @@ export default function NavigationPanel() {
       const admin = result?.signInUserSession?.idToken?.payload["custom:role"]
       if (admin) {
         const data = JSON.parse(admin);
-        if (data.includes("Admin") || data.includes("MasterAdmin")) {
-          console.log("admin found!")
+        if (data.includes("MasterAdmin")) {
+          console.log("master admin found!")
           newItems.push({
             type: "section",
             text: "Admin",
             items: [
               { type: "link", text: "Data", href: "/admin/data" },
               { type: "link", text: "User Feedback", href: "/admin/user-feedback" }
+            ],
+          },)
+        }
+        else if (data.includes("Admin")) {
+          console.log("admin found!")
+          newItems.push({
+            type: "section",
+            text: "Admin",
+            items: [
+              { type: "link", text: "Data", href: "/admin/data" },
             ],
           },)
         }

@@ -25,12 +25,19 @@ def lambda_handler(event, context):
 
         # Since the event only triggers on the marker file, proceed directly
         folder_prefix = os.path.dirname(object_key) + '/'
-        process_bls_data(folder_prefix)
-
-    return {
-        'statusCode': 200,
-        'body': json.dumps('BLS data transformation completed.')
-    }
+        try:
+            process_bls_data(folder_prefix)
+            return {
+                'statusCode': 200,
+                'body': json.dumps('BLS data transformation completed.')
+            }
+        except Exception as e:
+            logger.error(f"Error processing BLS data: {e}")
+            print(f"Error processing BLS data: {e}")
+            return {
+                'statusCode': 500,
+                'body': json.dumps('Error processing BLS data.')
+            }
 
 def process_bls_data(folder_prefix):
     logger.info(f"Processing BLS data for folder {folder_prefix}")

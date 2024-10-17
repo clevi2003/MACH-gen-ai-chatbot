@@ -8,10 +8,10 @@ def lambda_handler(event, context):
     try:
         claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
         roles = json.loads(claims['custom:role'])
-        institutions = json.loads(claims['custom:institution'])
         if "MasterAdmin" in roles:                        
             print("admin granted!")
         elif "Admin" in roles:
+            institutions = json.loads(claims['custom:institution'])
             institution = institutions[0]
             allowed_prefixes = [f"archive/{institution}/", f"raw/{institution}/", f"processed/{institution}/", f"current/{institution}/"]
             if not any(payload['KEY'].startswith(prefix) for prefix in allowed_prefixes):
