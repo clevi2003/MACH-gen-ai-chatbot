@@ -8,4 +8,4 @@ export const cognitoDomainName = "genaimvp-auth"
 // make sure to leave it blank if you do not actually have an SSO provider configured in Cognito!
 export const OIDCIntegrationName = ""
 // this MUST be unique to your account
-export const stackName = "GenAiChatStack"
+export const stackName = "ConflReportChatStack"
