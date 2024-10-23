@@ -76,8 +76,20 @@ export class LambdaFunctionStack extends cdk.Stack {
           environment : {
             "WEBSOCKET_API_ENDPOINT" : props.wsApiEndpoint.replace("wss","https"),            
             "PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
-            You have access to a search tool that you will use to look up answers to questions.`,
-            'KB_ID' : props.knowledgeBase.attrKnowledgeBaseId
+            You have access to a search tool that you will use to look up answers to questions. You must 
+            respond to the user in the same language as their question`,
+            'KB_ID' : props.knowledgeBase.attrKnowledgeBaseId,
+            'CONFL_PROMPT': `You are a knowledge expert looking to either identify conflicts among the 
+            above documents or assure the user that no conflicts exist. You are not looking for small 
+            syntatic or grammatical differences, but rather pointing out major factual inconsistencies. 
+            You can be confident about identifying a conflict between two documents if the conflict 
+            represents a major factual difference that would result in semantic differences between 
+            responses constructed with each respective decoment. If conflicts are detected, please format 
+            them in an organized list where each entry includes the names of the conflicting documents as 
+            well as the conflicting statements. If there is no conflict please respond only with "no 
+            conflicts detected" Do not include any additional information. Only include identified 
+            conflicts that you are confident are factual inconsistencies. Do not include identified 
+            conflicts that you are not confident are real conflicts.`
           },
           timeout: cdk.Duration.seconds(300)
         });
