@@ -134,6 +134,24 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
     }
   }, [props.messageHistory]);
 
+  const cleanMessageHistory = (messageHistory) => {
+    return messageHistory.map((message) => {
+      if (message.type === ChatBotMessageType.AI) {
+        const content = message.content;
+        const conflictIndex = content.indexOf('\n\nGenerating Report of Potential Source Conflicts...\n\n');
+        if (conflictIndex !== -1) {
+          // Remove the conflict report
+          return {
+            ...message,
+            content: content.substring(0, conflictIndex),
+          };
+        }
+      }
+      // Return the message as is
+      return message;
+    });
+  };
+
   /**Sends a message to the chat API */
   const handleSendMessage = async () => {    
     if (props.running) return;
@@ -211,7 +229,7 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
           "action": "getChatbotResponse",
           "data": {
             userMessage: messageToSend,
-            chatHistory: assembleHistory(messageHistoryRef.current.slice(0, -2)),
+            chatHistory: assembleHistory(cleanMessageHistory(messageHistoryRef.current.slice(0, -2))),
             systemPrompt: `You are an AI chatbot for the RIDE, an MBTA paratransit service. You will help customer service representatives respond to user complaints and queries.
           Answer questions based on your Context and nothing more. If you are unable to decisively answer a question, direct them to customer service. Do not provide information outside of your given Context.
           Customer service is needed if it is something you cannot answer. Requests for fare history require customer service, as do service complaints like a rude driver or late pickup.
