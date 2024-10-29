@@ -133,13 +133,14 @@ export default function ChatMessage(props: ChatMessageProps) {
 
     ws.addEventListener("close", () => {
       setLoadingConflictReport(false);
+      setShowConflictButton(false);
     });
   };
 
   useEffect(() => {
     if (props.message.conflictReport) {
       setConflictReport(props.message.conflictReport);
-      setShowConflictButton(!showConflictButton);
+      setShowConflictButton(false);
     }
   }, [props.message.conflictReport]);
   
