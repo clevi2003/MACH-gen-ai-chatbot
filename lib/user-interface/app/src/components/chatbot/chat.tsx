@@ -130,7 +130,9 @@ export default function Chat(props: { sessionId?: string}) {
         {messageHistory.map((message, idx) => (
           <ChatMessage
             key={idx}
-            message={message}            
+            message={message} 
+            messageKey={idx}
+            session={props.sessionId}           
             onThumbsUp={() => handleFeedback(1,idx, message)}
             onThumbsDown={(feedbackTopic : string, feedbackType : string, feedbackMessage: string) => handleFeedback(0,idx, message,feedbackTopic, feedbackType, feedbackMessage)}                        
           />

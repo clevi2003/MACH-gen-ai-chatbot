@@ -30,9 +30,16 @@ import "../../styles/app.scss";
 import { useNotifications } from "../notif-manager";
 import { Utils } from "../../common/utils";
 import {feedbackCategories, feedbackTypes} from '../../common/constants'
+import { AppContext } from "../../common/app-context"; 
+import { useContext } from "react";
+import { Auth } from "aws-amplify";
+
+
 
 export interface ChatMessageProps {
   message: ChatBotHistoryItem;  
+  messageKey: number;
+  session: string;
   onThumbsUp: () => void;
   onThumbsDown: (feedbackTopic : string, feedbackType : string, feedbackMessage: string) => void;  
 }
@@ -47,6 +54,9 @@ export default function ChatMessage(props: ChatMessageProps) {
   const [selectedTopic, setSelectedTopic] = React.useState({label: "Select a Topic", value: "1"});
   const [selectedFeedbackType, setSelectedFeedbackType] = React.useState({label: "Select a Problem", value: "1"});
   const [value, setValue] = useState("");
+  const [loadingConflictReport, setLoadingConflictReport] = useState(false);
+  const [conflictReport, setConflictReport] = useState("");
+  const appContext = useContext(AppContext);
 
 
   const content =
@@ -55,6 +65,74 @@ export default function ChatMessage(props: ChatMessageProps) {
       : "";
 
   const showSources = props.message.metadata?.Sources && (props.message.metadata.Sources as any[]).length > 0;
+
+  const handleConflictReport = async () => {
+    if (loadingConflictReport) return; // Prevent multiple clicks
+    setLoadingConflictReport(true);
+
+    // get authenticated user
+    let username;
+    try {
+      const user = await Auth.currentAuthenticatedUser();
+      username = user.username;
+      if (!username) throw new Error("Unable to get current user.");
+    } catch (error) {
+      addNotification("error", error.message);
+      setLoadingConflictReport(false);
+      return;
+    }
+
+    // setup websocket
+    const TOKEN = await Utils.authenticate();
+
+    // WebSocket endpoint
+    const wsEndpoint = appContext.wsEndpoint;
+    const wsUrl = `${wsEndpoint}/?Authorization=${TOKEN}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.addEventListener("open", () => {
+      const messagePayload = JSON.stringify({
+        action: "generateConflictReport",
+        data: {
+          key: props.messageKey,
+          user_id: username,
+          session_id: props.session,
+        },
+      });
+      ws.send(messagePayload);
+    });
+
+    ws.addEventListener("message", (event) => {
+      const data = event.data;
+
+      if (data.includes("<!ERROR!>:")) {
+        addNotification("error", data);
+        ws.close();
+        setLoadingConflictReport(false);
+        return;
+      }
+      if (data === "!<|EOF_STREAM|>!") {
+        // End of message
+        ws.close();
+        setLoadingConflictReport(false);
+        return;
+      }
+
+      // Append data to conflict report
+      setConflictReport((prev) => prev + data);
+    });
+
+    ws.addEventListener("error", (err) => {
+      console.error("WebSocket error:", err);
+      addNotification("error", "An error occurred with the WebSocket connection.");
+      ws.close();
+      setLoadingConflictReport(false);
+    });
+
+    ws.addEventListener("close", () => {
+      setLoadingConflictReport(false);
+    });
+  };
   
 
   return (
@@ -124,7 +202,10 @@ export default function ChatMessage(props: ChatMessageProps) {
               <ButtonDropdown
               items={(props.message.metadata.Sources as any[]).map((item) => { return {id: "id", disabled: false, text : item.title, href : item.uri, external : true, externalIconAriaLabel: "(opens in new tab)"}})}
         
-              >Sources</ButtonDropdown>              
+              >Sources</ButtonDropdown>
+              <Button variant="primary" onClick={handleConflictReport} disabled={loadingConflictReport}>
+                {loadingConflictReport ? "Generating..." : "Generate Conflict Report"}
+              </Button>              
               </SpaceBetween>
             )
           }

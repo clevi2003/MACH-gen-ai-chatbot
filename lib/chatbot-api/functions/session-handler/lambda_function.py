@@ -134,6 +134,69 @@ def update_session(session_id, user_id, new_chat_entry):
             'error': str(general_error),
             'body': 'An unexpected error occurred while updating the se.'
         }
+    
+# function to update the conflict report for a given index of a user/session chathistory
+def update_conflict_report(session_id, user_id, index, conflict_report):
+    try:
+        # Fetch current session details
+        session_response = get_session(session_id, user_id)
+        if 'statusCode' in session_response and session_response['statusCode'] != 200:
+            return session_response  # Return the error from get_session if any
+
+        session_data = json.loads(session_response['body'])
+        
+        # Check if 'chat_history' exists in the session data
+        current_chat_history = session_data.get('chat_history', [])
+        
+        # Check if the index is valid
+        if index < 0 or index >= len(current_chat_history):
+            return {
+                'statusCode': 400,
+                'headers': {'Access-Control-Allow-Origin': '*'},
+                'body': 'Invalid index provided for conflict report update.'
+            }
+        
+        # Update the conflict report at the specified index
+        current_chat_history[index]['conflict_report'] = conflict_report
+        
+        # Update the item in DynamoDB
+        response = table.update_item(
+            Key={"session_id": session_id, "user_id": user_id},
+            UpdateExpression="set chat_history = :chat_history",
+            ExpressionAttributeValues={":chat_history": current_chat_history},
+            ReturnValues="UPDATED_NEW"
+        )
+        return {
+            'statusCode': 200,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': response.get("Attributes", {})
+        }
+    except ClientError as error:
+        print("Caught error: DynamoDB error - could not update conflict report")
+        # Return a structured error message and status code
+        error_code = error.response['Error']['Code']
+        if error_code == "ResourceNotFoundException":
+            return {
+                'statusCode': 404,
+                'headers': {'Access-Control-Allow-Origin': '*'},
+                'error': str(error),
+                'body': f"No record found with session id: {session_id}"
+            }
+        else:
+            return {
+                'statusCode': 500,
+                'headers': {'Access-Control-Allow-Origin': '*'},
+                'error': str(error),
+                'body': 'Failed to update the conflict report due to a database error.'
+            }
+    except Exception as general_error:
+        print("Caught error: DynamoDB error - could not update conflict report")
+        # Return a generic error response for unexpected errors
+        return {
+            'statusCode': 500,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'error': str(general_error),
+        }
 
 
 def delete_session(session_id, user_id):
@@ -262,6 +325,8 @@ def lambda_handler(event, context):
     chat_history = data.get('chat_history', None)
     new_chat_entry = data.get('new_chat_entry')
     title = data.get('title', f"Chat on {str(datetime.now())}")
+    confl_report = data.get('conflict_report', None)
+    idx = data.get('message_index', None)
     if operation != 'list_sessions_by_user_id':
         print(operation)
     print(data)
@@ -281,6 +346,8 @@ def lambda_handler(event, context):
         return delete_session(session_id, user_id)
     elif operation == 'delete_user_sessions':
         return delete_user_sessions(user_id)
+    elif operation == 'update_conflict_report':
+        return update_conflict_report(session_id, user_id, idx, confl_report)
     else:
         response = {
             'statusCode': 400,

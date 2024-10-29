@@ -47,7 +47,8 @@ export interface ChatInputPanelProps {
   setRunning: Dispatch<SetStateAction<boolean>>;
   session: { id: string; loading: boolean };
   messageHistory: ChatBotHistoryItem[];
-  setMessageHistory: (history: ChatBotHistoryItem[]) => void;  
+  //setMessageHistory: (history: ChatBotHistoryItem[]) => void;  
+  setMessageHistory: Dispatch<SetStateAction<ChatBotHistoryItem[]>>;
 }
 
 export abstract class ChatScrollState {
@@ -261,7 +262,24 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
           console.log(sources);
         }
 
-        // Update the chat history state with the new message        
+        // Update the chat history state with the new message  
+        props.setMessageHistory((prevHistory) => {
+          const newHistory = [
+            ...prevHistory.slice(0, -2),
+            {
+              type: ChatBotMessageType.Human,
+              content: messageToSend,
+              metadata: {},
+            },
+            {
+              type: ChatBotMessageType.AI,
+              content: receivedData,
+              metadata: sources,
+            },
+          ];
+          return newHistory;
+        });
+        /*      
         messageHistoryRef.current = [
           ...messageHistoryRef.current.slice(0, -2),
 
@@ -278,7 +296,8 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
             metadata: sources,
           },
         ];        
-        props.setMessageHistory(messageHistoryRef.current);        
+        props.setMessageHistory(messageHistoryRef.current);    
+        */    
       });
       // Handle possible errors
       ws.addEventListener('error', function error(err) {
