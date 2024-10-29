@@ -57,6 +57,8 @@ export default function ChatMessage(props: ChatMessageProps) {
   const [loadingConflictReport, setLoadingConflictReport] = useState(false);
   const [conflictReport, setConflictReport] = useState("");
   const appContext = useContext(AppContext);
+  const [showConflictButton, setShowConflictButton] = useState(true);
+
 
 
   const content =
@@ -137,6 +139,7 @@ export default function ChatMessage(props: ChatMessageProps) {
   useEffect(() => {
     if (props.message.conflictReport) {
       setConflictReport(props.message.conflictReport);
+      setShowConflictButton(!showConflictButton);
     }
   }, [props.message.conflictReport]);
   
@@ -209,9 +212,11 @@ export default function ChatMessage(props: ChatMessageProps) {
               items={(props.message.metadata.Sources as any[]).map((item) => { return {id: "id", disabled: false, text : item.title, href : item.uri, external : true, externalIconAriaLabel: "(opens in new tab)"}})}
         
               >Sources</ButtonDropdown>
-              <Button variant="primary" onClick={handleConflictReport} disabled={loadingConflictReport}>
-                {loadingConflictReport ? "Generating..." : "Generate Conflict Report"}
-              </Button>              
+              {showConflictButton && (
+                <Button variant="primary" onClick={handleConflictReport} disabled={loadingConflictReport}>
+                  {loadingConflictReport ? "Generating..." : "Generate Conflict Report"}
+                </Button>  
+              )}           
               </SpaceBetween>
             )
           }
