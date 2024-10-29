@@ -136,12 +136,15 @@ export class SessionsClient {
         content: value.user,
         metadata: {
         },
+        conflictReport: value.conflict_report,
       },
         {
           type: ChatBotMessageType.AI,
           content: value.chatbot,
           metadata: metadata,
-        },)
+        conflictReport: value.conflict_report,
+        },
+        )
     })
     return history;
   }

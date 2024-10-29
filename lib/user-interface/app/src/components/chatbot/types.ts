@@ -29,6 +29,7 @@ export interface ChatBotHistoryItem {
     | string[]
     | string[][]
   >;
+  conflictReport: string;
 }
 
 export interface FeedbackData {

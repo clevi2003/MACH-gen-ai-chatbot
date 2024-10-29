@@ -14,7 +14,7 @@ import {
   Select
 } from "@cloudscape-design/components";
 import * as React from "react";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../../styles/chat.module.scss";
@@ -133,6 +133,12 @@ export default function ChatMessage(props: ChatMessageProps) {
       setLoadingConflictReport(false);
     });
   };
+
+  useEffect(() => {
+    if (props.message.conflictReport) {
+      setConflictReport(props.message.conflictReport);
+    }
+  }, [props.message.conflictReport]);
   
 
   return (
@@ -303,6 +309,14 @@ export default function ChatMessage(props: ChatMessageProps) {
               />
             )}
           </div>
+          {conflictReport && (
+          <div className={styles.conflictReport}>
+            <TextContent>
+              <strong>Conflict Report:</strong>
+              <p>{conflictReport}</p>
+            </TextContent>
+          </div>
+        )}
         </Container>
       )}
       {loading && (

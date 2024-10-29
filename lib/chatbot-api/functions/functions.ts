@@ -76,7 +76,8 @@ export class LambdaFunctionStack extends cdk.Stack {
             well as the conflicting statements. If there is no conflict please respond only with "no 
             conflicts detected" Do not include any additional information. Only include identified 
             conflicts that you are confident are factual inconsistencies. Do not include identified 
-            conflicts that you are not confident are real conflicts.`
+            conflicts that you are not confident are real conflicts. Do not report conflicts that are not 
+            relevant to the user's query, which will be given below. `
           },
           timeout: cdk.Duration.seconds(300)
         });

@@ -166,12 +166,14 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
           type: ChatBotMessageType.Human,
           content: messageToSend,
           metadata: {            
-          },          
+          },
+          conflictReport: "",          
         },
         {
           type: ChatBotMessageType.AI,          
           content: receivedData,
           metadata: {},
+          conflictReport: "",
         },
       ];
       props.setMessageHistory(messageHistoryRef.current);
@@ -202,6 +204,7 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
           type: ChatBotMessageType.AI,          
           content: 'Response timed out!',
           metadata: {},
+          conflictReport: "",
         })
       }},60000)
 
@@ -270,11 +273,13 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
               type: ChatBotMessageType.Human,
               content: messageToSend,
               metadata: {},
+              conflictReport: "",
             },
             {
               type: ChatBotMessageType.AI,
               content: receivedData,
               metadata: sources,
+              conflictReport: "",
             },
           ];
           return newHistory;

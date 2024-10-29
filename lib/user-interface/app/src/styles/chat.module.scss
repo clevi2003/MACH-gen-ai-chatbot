@@ -214,3 +214,11 @@
   opacity: 1 !important;
   pointer-events: none; /* Disable pointer events for the selected icon */
 }
+
+/* Styles for conflict report */
+.conflictReport {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f9f9f9; /* Adjust as needed */
+  border: 1px solid #ddd; /* Adjust as needed */
+}
