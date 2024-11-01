@@ -55,7 +55,8 @@ export class ChatBotApi extends Construct {
         knowledgeBucket: buckets.knowledgeBucket,
         knowledgeBase: knowledgeBase.knowledgeBase,
         knowledgeBaseSource : knowledgeBase.dataSource,
-
+        evalResutlsBucket : buckets.evalResultsBucket,
+        evalTestCasesBucket : buckets.evalTestCasesBucket,
       })
 
     const wsAuthorizer = new WebSocketLambdaAuthorizer('WebSocketAuthorizer', props.authentication.lambdaAuthorizer, {identitySource: ['route.request.querystring.Authorization']});

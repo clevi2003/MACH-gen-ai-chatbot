@@ -17,6 +17,8 @@ interface LambdaFunctionStackProps {
   readonly knowledgeBucket : s3.Bucket;
   readonly knowledgeBase : bedrock.CfnKnowledgeBase;
   readonly knowledgeBaseSource: bedrock.CfnDataSource;
+  readonly evalResutlsBucket : s3.Bucket;
+  readonly evalTestCasesBucket : s3.Bucket;
 }
 
 export class LambdaFunctionStack extends cdk.Stack {  
@@ -27,6 +29,8 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly getS3Function : lambda.Function;
   public readonly uploadS3Function : lambda.Function;
   public readonly syncKBFunction : lambda.Function;
+  public readonly generateResponseFunction : lambda.Function;
+  public readonly llmEvalFunction : lambda.Function;
 
   constructor(scope: Construct, id: string, props: LambdaFunctionStackProps) {
     super(scope, id);    
@@ -208,5 +212,46 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.uploadS3Function = uploadS3APIHandlerFunction;
 
+    const generateResponseFunction = new lambda.Function(scope, 'GenerateResponseFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
+          code: lambda.Code.fromAsset(path.join(__dirname, 'generate-response')), // Points to the lambda directory
+          handler: 'index.handler', // Points to the 'hello' file in the lambda directory
+          environment : {
+            "PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
+            You have access to a search tool that you will use to look up answers to questions.`,
+            'KB_ID' : props.knowledgeBase.attrKnowledgeBaseId
+          },
+          timeout: cdk.Duration.seconds(300)
+        });
+    generateResponseFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'bedrock:InvokeModelWithResponseStream',
+        'bedrock:InvokeModel',
+        
+      ],
+      resources: ["*"]
+    }));
+    generateResponseFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'bedrock:Retrieve'
+      ],
+      resources: [props.knowledgeBase.attrKnowledgeBaseArn]
+    }));
+    this.generateResponseFunction = generateResponseFunction;
+
+    const llmEvalFunction = new lambda.Function(scope, 'llmEvalFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'llm-evaluation')), // Points to the lambda directory
+      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "RESULTS_BUCKET" : props.evalResutlsBucket.bucketName, 
+        "TEST_CASES_BUCKET" : props.evalTestCasesBucket.bucketName, 
+        "GENERATE_RESPONSE_LAMBDA_NAME" : generateResponseFunction.functionName,
+        "BEDROCK_MODEL_ID" : 'anthropic.claude-3-5-sonnet-20240620-v1:0'
+      },
+      timeout: cdk.Duration.seconds(30)
+    });
   }
 }
