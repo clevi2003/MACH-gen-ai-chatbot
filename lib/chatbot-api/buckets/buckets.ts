@@ -7,6 +7,7 @@ export class S3BucketStack extends cdk.Stack {
   public readonly feedbackBucket: s3.Bucket;
   public readonly evalResultsBucket: s3.Bucket;
   public readonly evalTestCasesBucket: s3.Bucket;
+  public readonly ragasDependenciesBucket: s3.Bucket;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -47,6 +48,17 @@ export class S3BucketStack extends cdk.Stack {
     });
 
     this.evalTestCasesBucket = new s3.Bucket(scope, 'EvalTestCasesBucket', {
+      versioned: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      cors: [{
+        allowedMethods: [s3.HttpMethods.GET,s3.HttpMethods.POST,s3.HttpMethods.PUT,s3.HttpMethods.DELETE],
+        allowedOrigins: ['*'], 
+        allowedHeaders: ["*"]     
+      }]
+    });
+
+    this.ragasDependenciesBucket = new s3.Bucket(scope, 'RagasDependenciesBucket', {
       versioned: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
