@@ -19,6 +19,7 @@ interface LambdaFunctionStackProps {
   readonly knowledgeBaseSource: bedrock.CfnDataSource;
   readonly evalResutlsBucket : s3.Bucket;
   readonly evalTestCasesBucket : s3.Bucket;
+  readonly ragasDependenciesBucket : s3.Bucket;
 }
 
 export class LambdaFunctionStack extends cdk.Stack {  
