@@ -112,7 +112,8 @@ export default function NavigationPanel() {
             text: "Admin",
             items: [
               { type: "link", text: "Data", href: "/admin/data" },
-              { type: "link", text: "User Feedback", href: "/admin/user-feedback" }
+              { type: "link", text: "User Feedback", href: "/admin/user-feedback" },
+              { type: "link", text: "LLM Evaluation", href: "/admin/llm-evaluation" }
             ],
           },)
         }

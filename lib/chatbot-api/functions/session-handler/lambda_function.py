@@ -265,7 +265,7 @@ def lambda_handler(event, context):
     if operation != 'list_sessions_by_user_id':
         print(operation)
     print(data)
-    print(new_chat_entry)
+    print(new_chat_entry) 
 
     if operation == 'add_session':
         return add_session(session_id, user_id, chat_history, title, new_chat_entry)

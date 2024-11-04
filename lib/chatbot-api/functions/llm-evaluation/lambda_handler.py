@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import boto3
 import os
@@ -17,7 +18,9 @@ from langchain_community.chat_models import BedrockChat
 from langchain_community.embeddings import BedrockEmbeddings
 
 TEST_CASE_BUCKET = os.environ['TEST_CASES_BUCKET']
-RESULTS_BUCKET = os.environ['RESULTS_BUCKET']
+EVAL_RESULTS_HANDLER_LAMBDA_NAME = os.environ['EVAL_RESULTS_HANDLER_LAMBDA_NAME']
+GENERATE_RESPONSE_LAMBDA_NAME = os.environ['GENERATE_RESPONSE_LAMBDA_NAME']
+BEDROCK_MODEL_ID = os.environ['BEDROCK_MODEL_ID']
 
 def lambda_handler(event, context):
     try:
@@ -27,7 +30,7 @@ def lambda_handler(event, context):
         # Get the test cases file URI from the event
         test_cases_key = event.get('testCasesKey')
         if not test_cases_key:
-            raise ValueError("testCasesUri parameter is required in the event.")
+            raise ValueError("testCasesKey parameter is required in the event.")
 
         # Parse S3 bucket and key from the URI
         # bucket_name, key = parse_s3_uri(test_cases_uri)   
@@ -78,28 +81,50 @@ def lambda_handler(event, context):
         average_relevance = total_relevance / num_test_cases if num_test_cases > 0 else 0
         average_correctness = total_correctness / num_test_cases if num_test_cases > 0 else 0
 
-        # Save the detailed results to S3
-        timestamp = uuid.uuid4().hex
-        detailed_results_key = f'evaluation_results/detailed_results_{timestamp}.csv'
-        save_results_to_s3_csv(s3_client, RESULTS_BUCKET, detailed_results_key, detailed_results)
+        # Build the payload for the eval-results-handler Lambda
+        evaluation_id = str(uuid.uuid4())
+        timestamp = str(datetime.now())
+        evaluation_name = f"Evaluation on {timestamp}"
 
-        # Save the summary results to S3
-        summary_results = {
-            'averageSimilarity': average_similarity,
-            'averageRelevance': average_relevance,
-            'averageCorrectness': average_correctness,
+        payload = {
+            'operation': 'add_evaluation',
+            'evaluation_id': evaluation_id,
+            'evaluation_name': evaluation_name,
+            'average_similarity': average_similarity,
+            'average_relevance': average_relevance,
+            'average_correctness': average_correctness,
+            'total_questions': num_test_cases,
+            'detailed_results': detailed_results
         }
-        summary_results_key = f'evaluation_results/summary_results_{timestamp}.csv'
-        save_summary_to_s3_csv(s3_client, RESULTS_BUCKET, summary_results_key, summary_results)
 
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'message': 'Evaluation completed successfully.',
-                'detailedResultsKey': detailed_results_key,
-                'summaryResultsKey': summary_results_key,
-            }),
-        }
+        # Invoke the eval-results-handler Lambda
+        response = lambda_client.invoke(
+            FunctionName=EVAL_RESULTS_HANDLER_LAMBDA_NAME,
+            InvocationType='RequestResponse',
+            Payload=json.dumps(payload),
+        )
+
+        # Process the response
+        response_payload = response['Payload'].read().decode('utf-8')
+        result = json.loads(response_payload)
+
+        if 'statusCode' in result and result['statusCode'] == 200:
+            return {
+                'statusCode': 200,
+                'body': json.dumps({
+                    'message': 'Evaluation completed and results saved successfully.',
+                    'evaluation_id': evaluation_id
+                }),
+            }
+        else:
+            error_message = result.get('body', 'Unknown error occurred.')
+            return {
+                'statusCode': 500,
+                'body': json.dumps({
+                    'error': f"Error saving evaluation results: {error_message}"
+                }),
+            }
+        
     except Exception as e:
         logging.error(f"Error in evaluation Lambda: {str(e)}")
         return {
@@ -108,15 +133,6 @@ def lambda_handler(event, context):
                 'error': str(e),
             }),
         }
-    
-def parse_s3_uri(s3_uri):
-    if s3_uri.startswith('s3://'):
-        s3_uri = s3_uri[5:]
-    else:
-        raise ValueError("Invalid S3 URI")
-
-    bucket_name, _, key = s3_uri.partition('/')
-    return bucket_name, key
 
 def read_test_cases_from_s3(s3_client, bucket_name, key):
     try:
@@ -158,45 +174,6 @@ def invoke_generate_response_lambda(lambda_client, question):
     except Exception as e:
         logging.error(f"Error invoking generateResponseLambda: {str(e)}")
         return ""
-    
-def save_results_to_s3_csv(s3_client, bucket_name, key, data):
-    try:
-        # Write data to CSV
-        output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=['question', 'expectedResponse', 'actualResponse', 'similarity', 'relevance', 'correctness'])
-        writer.writeheader()
-        for row in data:
-            writer.writerow(row)
-
-        # Upload to S3
-        s3_client.put_object(
-            Bucket=bucket_name,
-            Key=key,
-            Body=output.getvalue(),
-            ContentType='text/csv'
-        )
-    except ClientError as e:
-        logging.error(e)
-        raise e
-
-def save_summary_to_s3_csv(s3_client, bucket_name, key, summary):
-    try:
-        # Write summary to CSV
-        output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=['averageSimilarity', 'averageRelevance', 'averageCorrectness'])
-        writer.writeheader()
-        writer.writerow(summary)
-
-        # Upload to S3
-        s3_client.put_object(
-            Bucket=bucket_name,
-            Key=key,
-            Body=output.getvalue(),
-            ContentType='text/csv'
-        )
-    except ClientError as e:
-        logging.error(e)
-        raise e
     
 def evaluate_with_ragas(question, expected_response, actual_response):
     try:
@@ -256,4 +233,3 @@ def evaluate_with_ragas(question, expected_response, actual_response):
             "status": "error",
             "error": str(e)
         }
-

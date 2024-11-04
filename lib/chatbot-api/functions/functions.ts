@@ -17,7 +17,8 @@ interface LambdaFunctionStackProps {
   readonly knowledgeBucket : s3.Bucket;
   readonly knowledgeBase : bedrock.CfnKnowledgeBase;
   readonly knowledgeBaseSource: bedrock.CfnDataSource;
-  readonly evalResutlsBucket : s3.Bucket;
+  readonly evalSummariesTable : Table;
+  readonly evalResutlsTable : Table;
   readonly evalTestCasesBucket : s3.Bucket;
   readonly ragasDependenciesBucket : s3.Bucket;
 }
@@ -32,6 +33,7 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly syncKBFunction : lambda.Function;
   public readonly generateResponseFunction : lambda.Function;
   public readonly llmEvalFunction : lambda.Function;
+  public readonly handleEvalResultsFunction : lambda.Function;
 
   constructor(scope: Construct, id: string, props: LambdaFunctionStackProps) {
     super(scope, id);    
@@ -242,17 +244,62 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.generateResponseFunction = generateResponseFunction;
 
-    const llmEvalFunction = new lambda.Function(scope, 'llmEvalFunction', {
-      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
-      code: lambda.Code.fromAsset(path.join(__dirname, 'llm-evaluation')), // Points to the lambda directory
-      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+    const llmEvalFunction = new lambda.DockerImageFunction(scope, 'llmEvaluationFunction', {
+      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, 'llm-evaluation')),
       environment: {
-        "RESULTS_BUCKET" : props.evalResutlsBucket.bucketName, 
+        "RESULTS_TABLE" : props.evalResutlsTable.tableName, 
         "TEST_CASES_BUCKET" : props.evalTestCasesBucket.bucketName, 
         "GENERATE_RESPONSE_LAMBDA_NAME" : generateResponseFunction.functionName,
-        "BEDROCK_MODEL_ID" : 'anthropic.claude-3-5-sonnet-20240620-v1:0'
-      },
-      timeout: cdk.Duration.seconds(30)
+        "BEDROCK_MODEL_ID" : props.knowledgeBase.attrKnowledgeBaseId
+      }
     });
+    llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        's3:*'
+      ],
+      resources: [props.evalTestCasesBucket.bucketArn,props.evalTestCasesBucket.bucketArn+"/*"]
+    }));
+    llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'lambda:InvokeFunction'
+      ],
+      resources: [this.sessionFunction.functionArn]
+    }));
+    llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'ecr:GetAuthorization',
+        'ecr:GetDownloadUrlForLayer',
+        'ecr:BatchGetImage',
+        'ecr:BatchCheckLayerAvailability'
+      ],
+      resources: ['*']
+    }));
+    this.llmEvalFunction = llmEvalFunction;
+
+    const evalResultsAPIHandlerFunction = new lambda.Function(scope, 'EvalResultsHandlerFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'eval-results-handler')), // Points to the lambda directory
+      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "EVALUATION_RESULTS_TABLE" : props.evalResutlsTable.tableName,
+        "EVALUATION_SUMMARIES_TABLE" : props.evalSummariesTable.tableName
+      }
+    });
+    evalResultsAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({ 
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'dynamodb:GetItem',
+        'dynamodb:PutItem',
+        'dynamodb:UpdateItem',
+        'dynamodb:DeleteItem',
+        'dynamodb:Query',
+        'dynamodb:Scan'
+      ],
+      resources: [props.evalResutlsTable.tableArn, props.evalResutlsTable.tableArn + "/index/*", props.evalSummariesTable.tableArn, props.evalSummariesTable.tableArn + "/index/*"]
+    }));
+    this.handleEvalResultsFunction = evalResultsAPIHandlerFunction;
   }
 }
