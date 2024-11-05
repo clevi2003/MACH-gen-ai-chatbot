@@ -65,8 +65,12 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
   {
     id: "timestamp",
     header: "Timestamp",
-    cell: (item) => new Date(item.timestamp).toLocaleString(),
-    sortingField: "timestamp",
+    //cell: (item) => new Date(item.timestamp).toLocaleString(),
+    cell: (item) =>
+      DateTime.fromISO(new Date(item.Timestamp).toISOString()).toLocaleString(
+        DateTime.DATETIME_SHORT
+      ),
+    sortingField: "Timestamp",
   },
   {
     id: "averageSimilarity",
@@ -97,13 +101,13 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
     header: "View Detailed Evaluation",
     cell: (item) => (
       <Button
-        onClick={() => item.viewEvaluationDetails(item.evaluation_id)}
+        onClick={() => item.viewDetailedEvaluation(item.evaluation_id)}
         variant="link"
       >
         View Details
       </Button>
     ),
-  },
+  }, 
 ];
 
 const DETAILED_EVAL_COLUMN_DEFINITIONS = [
