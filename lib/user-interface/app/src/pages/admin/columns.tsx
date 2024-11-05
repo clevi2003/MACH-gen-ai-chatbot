@@ -102,6 +102,7 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
     cell: (item) => (
       <Button
         onClick={() => item.viewDetailedEvaluation(item.evaluation_id)}
+        //onClick={() => navigate(`/admin/llm-evaluation/${item.evaluationId}`)}
         variant="link"
       >
         View Details
