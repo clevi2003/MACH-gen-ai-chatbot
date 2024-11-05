@@ -30,6 +30,7 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
   const [evaluationDetails, setEvaluationDetails] = useState([]);
   const [loading, setLoading] = useState(true);
   const { addNotification } = useNotifications();
+  const [evaluationName, setEvaluationName] = useState("");
 
   useEffect(() => {
     fetchEvaluationDetails();
@@ -42,6 +43,7 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
         evaluationId
       );
       setEvaluationDetails(result);
+      setEvaluationName(result[0].evaluation_name);
     } catch (error) {
       console.error(Utils.getErrorMessage(error));
       addNotification("error", "Error fetching evaluation details");
@@ -51,7 +53,9 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
 
   const breadcrumbItems = [
     { text: "LLM Evaluation", href: "/admin/llm-evaluation" },
-    { text: `Evaluation ${evaluationId}`, href: "#" },
+    // text should be Evaluation {evaluation name}
+    { text: `Evaluation ${evaluationName}`, href: "#" },
+    // { text: `Evaluation ${evaluationId}`, href: "#" },
   ];
 
   const columnDefinitions = getColumnDefinition(props.documentType);
