@@ -10,7 +10,6 @@ import {
   LineChart,
 } from "@cloudscape-design/components";
 import { Authenticator, Heading, useTheme } from "@aws-amplify/ui-react";
-import BaseAppLayout from "../../components/base-app-layout";
 import useOnFollow from "../../common/hooks/use-on-follow";
 import FeedbackTab from "./feedback-tab";
 import FeedbackPanel from "../../components/feedback-panel";
@@ -102,24 +101,6 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
   ];
 
   return (    
-    <BaseAppLayout
-      contentType="cards"
-      breadcrumbs={
-        <BreadcrumbGroup
-          onFollow={onFollow}
-          items={[
-            {
-              text: CHATBOT_NAME,
-              href: "/",
-            },
-            {
-              text: "View Metrics",
-              href: "/admin/kpis",
-            },
-          ]}
-        />
-      }
-      content={
         <ContentLayout header={<Header variant="h1">View Metrics</Header>}>
           <SpaceBetween size="xxl" direction="vertical">
             <Grid
@@ -174,7 +155,5 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
             </Container>
           </SpaceBetween>
         </ContentLayout>
-      }
-    />
-  );
+  )
 }
