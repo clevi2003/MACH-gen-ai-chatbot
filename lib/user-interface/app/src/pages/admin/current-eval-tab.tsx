@@ -101,7 +101,6 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
   ];
 
   return (    
-        <ContentLayout header={<Header variant="h1">View Metrics</Header>}>
           <SpaceBetween size="xxl" direction="vertical">
             <Grid
               gridDefinition={[
@@ -154,6 +153,5 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
               />
             </Container>
           </SpaceBetween>
-        </ContentLayout>
   )
 }
