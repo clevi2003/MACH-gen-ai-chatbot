@@ -116,6 +116,8 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
 
   // Sample scores
   const last_entry = items[0];
+  console.log("items: ", items);
+  console.log(typeof items);
   console.log("last entry: ", last_entry);
   console.log(typeof last_entry);
   const acc_score = last_entry['average_correctness']; // Score out of 100
