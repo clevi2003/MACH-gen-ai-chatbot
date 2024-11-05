@@ -1,281 +1,177 @@
 import {
-    Button,
-    Container,
-    FileUpload,
-    Flashbar,
-    FlashbarProps,
-    Form,
-    FormField,
-    ProgressBar,
-    ProgressBarProps,
-    SpaceBetween,
-  } from "@cloudscape-design/components";
-  import { useContext, useState } from "react";
-  import { AppContext } from "../../common/app-context";
-  import { ApiClient } from "../../common/api-client/api-client";
-  import { Utils } from "../../common/utils";
-  import { FileUploader } from "../../common/file-uploader";
-  import { useNavigate } from "react-router-dom";
-  
-  
-  const fileExtensions = new Set([
-    ".csv",
-    ".doc",
-    ".docx",
-    ".epub",
-    ".odt",
-    ".pdf",
-    ".ppt",
-    ".pptx",
-    ".tsv",
-    ".xlsx",
-    ".eml",
-    ".html",
-    ".json",
-    ".md",
-    ".msg",
-    ".rst",
-    ".rtf",
-    ".txt",
-    ".xml",
-  ]);
-  
-  const mimeTypes = {
-    '.pdf': 'application/pdf',
-    '.doc': 'application/msword',
-    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    '.xls': 'application/vnd.ms-excel',
-    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    '.ppt': 'application/vnd.ms-powerpoint',
-    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    '.txt': 'text/plain',
-    '.csv': 'text/csv',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.svg': 'image/svg+xml',
-    '.mp3': 'audio/mpeg',
-    '.wav': 'audio/wav',
-    '.mp4': 'video/mp4',
-    '.zip': 'application/zip',
-    '.rar': 'application/x-rar-compressed',
-    '.tar': 'application/x-tar'
-  };
-  
-  export interface FileUploadTabProps {
-    tabChangeFunction: () => void;  
-  }
-  
-  export default function CurrentEvalTab(props: FileUploadTabProps) {
-    const appContext = useContext(AppContext);
-    const apiClient = new ApiClient(appContext);
-    const navigate = useNavigate();
-    const [files, setFiles] = useState<File[]>([]);
-    const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
-    const [fileErrors, setFileErrors] = useState<string[]>([]);
-    const [globalError, setGlobalError] = useState<string | undefined>(undefined);
-    const [uploadError, setUploadError] = useState<string | undefined>(undefined);
-    const [uploadingStatus, setUploadingStatus] =
-      useState<FlashbarProps.Type>("info");
-    const [uploadProgress, setUploadProgress] = useState<number>(0);
-    const [uploadingIndex, setUploadingIndex] = useState<number>(0);
-    const [currentFileName, setCurrentFileName] = useState<string>("");
-    const [uploadPanelDismissed, setUploadPanelDismissed] =
-      useState<boolean>(false);
-  
-    const onSetFiles = (files: File[]) => {
-      const errors: string[] = [];
-      const filesToUpload: File[] = [];
-      setUploadError(undefined);
-  
-      if (files.length > 100) {
-        setUploadError("Max 100 files allowed");
-        files = files.slice(0, 100);
+  BreadcrumbGroup,
+  ContentLayout,
+  Header,
+  SpaceBetween,
+  Container,
+  Alert,
+  ProgressBar,
+  Grid,
+  LineChart,
+} from "@cloudscape-design/components";
+import { Authenticator, Heading, useTheme } from "@aws-amplify/ui-react";
+import BaseAppLayout from "../../components/base-app-layout";
+import useOnFollow from "../../common/hooks/use-on-follow";
+import FeedbackTab from "./feedback-tab";
+import FeedbackPanel from "../../components/feedback-panel";
+import { CHATBOT_NAME } from "../../common/constants";
+import { useState, useEffect } from "react";
+import { Auth } from "aws-amplify";
+import KPIsTab from "./kpis-tab";
+
+export default function Evaluation() {
+  const onFollow = useOnFollow();
+  const { tokens } = useTheme();
+  const [metrics, setMetrics] = useState<any>({});
+  const [admin, setAdmin] = useState<boolean>(false);
+
+  useEffect(() => {
+    (async () => {
+      const result = await Auth.currentAuthenticatedUser();
+      if (!result || Object.keys(result).length === 0) {
+        console.log("Signed out!")
+        Auth.signOut();
+        return;
       }
-  
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileExtension = file.name.split(".").pop()?.toLowerCase();
-  
-        if (!fileExtensions.has(`.${fileExtension}`)) {
-          errors[i] = "Format not supported";
-        } else if (file.size > 1000 * 1000 * 100) {
-          errors[i] = "File size is too large, max 100MB";
-        } else {
-          filesToUpload.push(file);
-        }
-      }
-  
-      setFiles(files);
-      setFileErrors(errors);
-      setFilesToUpload(filesToUpload);
-    };
-  
-    const onUpload = async () => {
-      if (!appContext) return;
-      setUploadingStatus("in-progress");
-      setUploadProgress(0);
-      setUploadingIndex(1);
-      setUploadPanelDismissed(false);
-  
-      const uploader = new FileUploader();
-      // const apiClient = new ApiClient(appContext);
-      const totalSize = filesToUpload.reduce((acc, file) => acc + file.size, 0);
-      let accumulator = 0;
-      let hasError = false;
-  
-      for (let i = 0; i < filesToUpload.length; i++) {
-        const file = filesToUpload[i];
-        setCurrentFileName(file.name);
-        let fileUploaded = 0;
-  
-        try {
-          
-          const fileExtension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
-          const fileType = mimeTypes[fileExtension];
-          const result = await apiClient.knowledgeManagement.getUploadURL(file.name,fileType);
-          // console.log(result);      
-          try {
-            await uploader.upload(
-              file,
-              result, //.data!.getUploadFileURL!,
-              fileType,
-              (uploaded: number) => {
-                fileUploaded = uploaded;
-                const totalUploaded = fileUploaded + accumulator;
-                const percent = Math.round((totalUploaded / totalSize) * 100);
-                setUploadProgress(percent);
-              }
-            );
-  
-            accumulator += file.size;
-            setUploadingIndex(Math.min(filesToUpload.length, i + 2));
-          } catch (error) {
-            console.error(error);
-            setUploadingStatus("error");
-            hasError = true;
-            break;
+
+      try {
+        const result = await Auth.currentAuthenticatedUser();
+        const admin = result?.signInUserSession?.idToken?.payload["custom:role"];
+        if (admin) {
+          const data = JSON.parse(admin);
+          if (data.includes("Admin")) {
+            setAdmin(true);
           }
-        } catch (error: any) {
-          setGlobalError(Utils.getErrorMessage(error));
-          console.error(Utils.getErrorMessage(error));
-          setUploadingStatus("error");
-          hasError = true;
-          break;
         }
       }
-  
-      if (!hasError) {
-        setUploadingStatus("success");
-        setFilesToUpload([]);
-        setFiles([]);
+      catch (e){
+        console.log(e);
       }
-    };
-  
-    const getProgressbarStatus = (): ProgressBarProps.Status => {
-      if (uploadingStatus === "error") return "error";
-      if (uploadingStatus === "success") return "success";
-      return "in-progress";
-    };
-  
-    /*const hasReadyWorkspace =
-      typeof props.data.workspace?.value !== "undefined" &&
-      typeof props.selectedWorkspace !== "undefined" &&
-      props.selectedWorkspace.status === "ready";*/
-  
+    })();
+  }, []);
+
+  if (!admin) {
     return (
-      <Form
-        actions={
-          <SpaceBetween direction="horizontal" size="xs">
-            <Button
-              data-testid="create"
-              variant="primary"
-              disabled={
-                filesToUpload.length === 0 ||
-                uploadingStatus === "in-progress"
-                // !hasReadyWorkspace
-              }
-              onClick={onUpload}
-            >
-              Upload files
-            </Button>
-          </SpaceBetween>
-        }
-        errorText={globalError}
+      <div
+        style={{
+          height: "90vh",
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
       >
-        <SpaceBetween size="l">
-          <Container>
-            <SpaceBetween size="l">
-              <FormField>
-                <FileUpload
-                  onChange={({ detail }) => onSetFiles(detail.value)}
-                  value={files}
-                  i18nStrings={{
-                    uploadButtonText: (e) => (e ? "Choose files" : "Choose file"),
-                    dropzoneText: (e) =>
-                      e ? "Drop files to upload" : "Drop file to upload",
-                    removeFileAriaLabel: (e) => `Remove file ${e + 1}`,
-                    limitShowFewer: "Show fewer files",
-                    limitShowMore: "Show more files",
-                    errorIconAriaLabel: "Error",
-                  }}
-                  multiple
-                  showFileLastModified
-                  showFileSize
-                  showFileThumbnail
-                  tokenLimit={3}
-                  constraintText={`Text documents up to 100MB supported (${Array.from(
-                    fileExtensions.values()
-                  ).join(", ")})`}
-                  fileErrors={fileErrors}
-                  errorText={uploadError}
-                />
-              </FormField>
-            </SpaceBetween>
-          </Container>
-          {uploadingStatus !== "info" && !uploadPanelDismissed && (
-            <Flashbar
-              items={[
-                {
-                  content: (
-                    <ProgressBar
-                      value={uploadProgress}
-                      variant="flash"
-                      description={
-                        uploadingStatus === "success" ||
-                        uploadingStatus === "error"
-                          ? null
-                          : currentFileName
-                      }
-                      label={
-                        uploadingStatus === "success" ||
-                        uploadingStatus === "error"
-                          ? "Uploading files"
-                          : `Uploading files ${uploadingIndex} of ${filesToUpload.length}`
-                      }
-                      status={getProgressbarStatus()}
-                      resultText={
-                        uploadingStatus === "success"
-                          ? "Upload complete"
-                          : "Upload failed"
-                      }
-                    />
-                  ),
-                  type: uploadingStatus,
-                  dismissible:
-                    uploadingStatus === "success" || uploadingStatus === "error",
-                  onDismiss: () => setUploadPanelDismissed(true),
-                  buttonText:
-                    uploadingStatus === "success" ? "View files" : undefined,
-                  onButtonClick: () =>
-                    props.tabChangeFunction()
-                },
-              ]}
-            />
-          )}
-        </SpaceBetween>
-      </Form>
+        <Alert header="Configuration error" type="error">
+          You are not authorized to view this page!
+        </Alert>
+      </div>
     );
   }
-  
+
+  // Sample scores
+  const acc_score = 97; // Score out of 100
+  const rel_score = 63; // Score out of 100
+  const sim_score = 82; // Score out of 100
+
+  // Sample data for the combined line chart with time on the x-axis
+  const accuracyData = [
+    { x: 1, y: 80 },
+    { x: 2, y: 85 },
+    { x: 3, y: 83 },
+    { x: 4, y: 87 },
+    { x: 5, y: 90 },
+  ];
+
+  const relevancyData = [
+    { x: 1, y: 55 },
+    { x: 2, y: 60 },
+    { x: 3, y: 62 },
+    { x: 4, y: 58 },
+    { x: 5, y: 63 },
+  ];
+
+  const similarityData = [
+    { x: 1, y: 88 },
+    { x: 2, y: 89 },
+    { x: 3, y: 90 },
+    { x: 4, y: 92 },
+    { x: 5, y: 91 },
+  ];
+
+  return (    
+    <BaseAppLayout
+      contentType="cards"
+      breadcrumbs={
+        <BreadcrumbGroup
+          onFollow={onFollow}
+          items={[
+            {
+              text: CHATBOT_NAME,
+              href: "/",
+            },
+            {
+              text: "View Metrics",
+              href: "/admin/kpis",
+            },
+          ]}
+        />
+      }
+      content={
+        <ContentLayout header={<Header variant="h1">View Metrics</Header>}>
+          <SpaceBetween size="xxl" direction="vertical">
+            <Grid
+              gridDefinition={[
+                { colspan: { default: 12, xs: 4 } },
+                { colspan: { default: 12, xs: 4 } },
+                { colspan: { default: 12, xs: 4 } },
+              ]}
+            >
+              <Container header={<Header variant="h3">Accuracy</Header>}>
+                <ProgressBar
+                  value={acc_score}
+                  description="Correctness of a given answer"
+                  resultText={`${acc_score}%`}
+                />
+              </Container>
+              <Container header={<Header variant="h3">Relevancy</Header>}>
+                <ProgressBar
+                  value={rel_score}
+                  description="Is the generated answer relevant for the question that was asked"
+                  resultText={`${rel_score}%`}
+                />
+              </Container>
+              <Container header={<Header variant="h3">Similarity</Header>}>
+                <ProgressBar
+                  value={sim_score}
+                  description="How semantically similar is the generated answer to the expected output"
+                  resultText={`${sim_score}%`}
+                />
+              </Container>
+            </Grid>
+
+            {/* Combined Line Chart for All Metrics */}
+            <Container header={<Header variant="h3">Metrics Over Time</Header>}>
+              <LineChart
+                series={[
+                  { title: "Accuracy", type: "line", data: accuracyData },
+                  { title: "Relevancy", type: "line", data: relevancyData },
+                  { title: "Similarity", type: "line", data: similarityData },
+                ]}
+                xDomain={[1, 5]}
+                yDomain={[50, 100]}// Adjust based on the data range
+                xTickValues={[1, 2, 3, 4, 5]}
+                i18nStrings={{
+                  legendAriaLabel: "Legend",
+                  chartAriaRoleDescription: "line chart",
+                  xTickFormatter: value => value,
+                  yTickFormatter: value => `${(value).toFixed(0)}%`,
+                }}
+                ariaLabel="Metrics over time"
+              />
+            </Container>
+          </SpaceBetween>
+        </ContentLayout>
+      }
+    />
+  );
+}
