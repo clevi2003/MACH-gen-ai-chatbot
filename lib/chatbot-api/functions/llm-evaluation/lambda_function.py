@@ -99,6 +99,7 @@ def lambda_handler(event, context):
             'total_questions': num_test_cases,
             'detailed_results': detailed_results
         }
+        print("save eval payload: ", payload)
 
         # Invoke the eval-results-handler Lambda
         response = lambda_client.invoke(

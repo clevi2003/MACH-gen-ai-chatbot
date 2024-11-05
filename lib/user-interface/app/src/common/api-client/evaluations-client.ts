@@ -24,8 +24,7 @@ export class EvaluationsClient {
     }
 
     const result = await response.json();
-    return result.body ? JSON.parse(result.body) : [];
-    // return JSON.parse(result.body || []); 
+    return result;
   }
 
   // Fetch detailed evaluation results
@@ -48,6 +47,6 @@ export class EvaluationsClient {
     }
 
     const result = await response.json();
-    return JSON.parse(result.body); // Adjust based on your API response
+    return result; // Adjust based on your API response
   }
 }
