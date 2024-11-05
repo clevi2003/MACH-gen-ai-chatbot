@@ -10,22 +10,65 @@ import {
   LineChart,
 } from "@cloudscape-design/components";
 import { Authenticator, Heading, useTheme } from "@aws-amplify/ui-react";
+import { Utils } from "../../common/utils";
 import useOnFollow from "../../common/hooks/use-on-follow";
 import FeedbackTab from "./feedback-tab";
 import FeedbackPanel from "../../components/feedback-panel";
 import { CHATBOT_NAME } from "../../common/constants";
-import { useState, useEffect } from "react";
+import { useCollection } from "@cloudscape-design/collection-hooks";
+import { useState, useEffect, useMemo, useContext, useCallback } from "react";
+import { useNotifications } from "../../components/notif-manager";
 import { Auth } from "aws-amplify";
+import { ApiClient } from "../../common/api-client/api-client"; 
+import { AppContext } from "../../common/app-context";
 
 export interface CurrentEvalTabProps {
   tabChangeFunction: () => void;
 }
 
+
 export default function CurrentEvalTab(props: CurrentEvalTabProps) {
+  const appContext = useContext(AppContext)
   const onFollow = useOnFollow();
   const { tokens } = useTheme();
   const [metrics, setMetrics] = useState<any>({});
   const [admin, setAdmin] = useState<boolean>(false);
+  const apiClient = useMemo(() => new ApiClient(appContext), [appContext])
+  const [evaluations, setEvaluations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { addNotification } = useNotifications();
+
+  const { items } = useCollection(evaluations, {
+    pagination: { pageSize: 10 },
+    sorting: {
+      defaultState: {
+        sortingColumn: {
+          sortingField: "timestamp",
+        },
+        isDescending: true,
+      },
+    },
+  });
+
+  /** Function to get evaluations */
+  const getEvaluations = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await apiClient.evaluations.getEvaluationSummaries();
+      console.log("results from api: ", result);
+      setEvaluations(result);
+    } catch (error) {
+      console.log("error: ", error);
+      console.error(Utils.getErrorMessage(error));
+      addNotification("error", "Error fetching evaluations");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiClient, addNotification]);
+  
+  useEffect(() => {
+    getEvaluations();
+  }, [getEvaluations]);
 
   useEffect(() => {
     (async () => {
@@ -70,10 +113,14 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
     );
   }
 
+
   // Sample scores
-  const acc_score = 97; // Score out of 100
-  const rel_score = 63; // Score out of 100
-  const sim_score = 82; // Score out of 100
+  const last_entry = items[0];
+  console.log("last entry: ", last_entry);
+  console.log(typeof last_entry);
+  const acc_score = last_entry['average_correctness']; // Score out of 100
+  const rel_score = last_entry['average_relevance']; // Score out of 100
+  const sim_score = last_entry['average_similarity']; // Score out of 100
 
   // Sample data for the combined line chart with time on the x-axis
   const accuracyData = [
