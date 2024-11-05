@@ -47,7 +47,6 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
     setLoading(true);
     try {
       const result = await apiClient.evaluations.getEvaluationSummaries();
-      console.log("results from api: ", result);
       setEvaluations(result);
     } catch (error) {
       console.log("error: ", error);

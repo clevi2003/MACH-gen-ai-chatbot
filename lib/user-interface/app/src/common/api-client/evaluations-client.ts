@@ -18,7 +18,6 @@ export class EvaluationsClient {
       },
       body: JSON.stringify({ operation: "get_evaluation_summaries" }),
     });
-    console.log("response in the api: ", response);
     if (!response.ok) {
       throw new Error("Failed to get evaluation summaries");
     }

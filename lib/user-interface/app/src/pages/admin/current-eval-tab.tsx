@@ -38,7 +38,7 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
   const [loading, setLoading] = useState(true);
   const { addNotification } = useNotifications();
 
-  const { items } = useCollection(evaluations, {
+  const { items, collectionProps, paginationProps } = useCollection(evaluations, {
     pagination: { pageSize: 10 },
     sorting: {
       defaultState: {
@@ -113,6 +113,14 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
     );
   }
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (items.length === 0) {
+    return <div>No evaluations found.</div>;
+  }
+
 
   // Sample scores
   const last_entry = items[0];
@@ -120,9 +128,9 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
   console.log(typeof items);
   console.log("last entry: ", last_entry);
   console.log(typeof last_entry);
-  const acc_score = last_entry['average_correctness']; // Score out of 100
-  const rel_score = last_entry['average_relevance']; // Score out of 100
-  const sim_score = last_entry['average_similarity']; // Score out of 100
+  const acc_score = last_entry['average_correctness'] * 100; // Score out of 100
+  const rel_score = last_entry['average_relevance'] * 100; // Score out of 100
+  const sim_score = last_entry['average_similarity'] * 100; // Score out of 100
 
   // Sample data for the combined line chart with time on the x-axis
   const accuracyData = [
@@ -147,7 +155,7 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
     { x: 3, y: 90 },
     { x: 4, y: 92 },
     { x: 5, y: 91 },
-  ];
+  ]; 
 
   return (    
           <SpaceBetween size="xxl" direction="vertical">

@@ -103,6 +103,8 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
       (
         parseFloat(item.average_similarity) 
       ).toFixed(2),
+    width: "10%",
+    wrapText: true
   },
   {
     id: "averageRelevance",
@@ -111,6 +113,8 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
     (
       parseFloat(item.average_relevance) 
     ).toFixed(2),
+    width: "10%",
+    wrapText: true
   },
   {
     id: "averageCorrectness",
@@ -119,6 +123,8 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
     (
       parseFloat(item.average_correctness) 
     ).toFixed(2),
+    width: "10%",
+    wrapText: true 
   },
   {
     id: "viewDetails",
@@ -132,16 +138,22 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
     id: "question",
     header: "Question",
     cell: (item) => item.question,
+    width: "23%",
+    wrapText: true
   },
   {
     id: "expectedResponse",
     header: "Expected Response",
     cell: (item) => item.expected_response,
+    width: "23%",
+    wrapText: true
   },
   {
     id: "actualResponse",
     header: "Actual Response",
     cell: (item) => item.actual_response,
+    width: "23%",
+    wrapText: true
   },
   {
     id: "similarity",
@@ -150,6 +162,8 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
       (
         parseFloat(item.similarity) 
       ).toFixed(2),
+    width: "11%",
+    wrapText: true
   },
   {
     id: "relevance",
@@ -158,6 +172,8 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
     (
       parseFloat(item.relevance) 
     ).toFixed(2),
+    width: "10%",
+    wrapText: true
   },
   {
     id: "correctness",
@@ -166,6 +182,8 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
     (
       parseFloat(item.correctness) 
     ).toFixed(2),
+    width: "10%",
+    wrapText: true
   },
 ];
 
