@@ -8,22 +8,24 @@ import uuid
 import logging
 from botocore.exceptions import ClientError
 
-# RAGAS imports
-from datasets import Dataset
-from ragas import evaluate
-from ragas.metrics import answer_correctness, answer_similarity, answer_relevancy
-
 # Bedrock imports
-from langchain_community.chat_models import BedrockChat
-from langchain_community.embeddings import BedrockEmbeddings
+#from langchain_community.chat_models import BedrockChat
+from langchain_aws import ChatBedrock as BedrockChat
+#from langchain_community.embeddings import BedrockEmbeddings
+from langchain_aws import BedrockEmbeddings
+#from langchain.chat_models import ChatBedrock as BedrockChat
+#from langchain.embeddings import BedrockEmbeddings
 
 TEST_CASE_BUCKET = os.environ['TEST_CASES_BUCKET']
 EVAL_RESULTS_HANDLER_LAMBDA_NAME = os.environ['EVAL_RESULTS_HANDLER_LAMBDA_NAME']
 GENERATE_RESPONSE_LAMBDA_NAME = os.environ['GENERATE_RESPONSE_LAMBDA_NAME']
 BEDROCK_MODEL_ID = os.environ['BEDROCK_MODEL_ID']
+EVAL_RESULTS_HANDLER_LAMBDA_NAME = os.environ['EVAL_RESULTS_HANDLER_LAMBDA_NAME']
 
-def lambda_handler(event, context):
+def lambda_handler(event, context): 
+    print("in the handler function")
     try:
+        print("in the try block")
         s3_client = boto3.client('s3')
         lambda_client = boto3.client('lambda')
 
@@ -51,11 +53,12 @@ def lambda_handler(event, context):
             expected_response = test_case['expectedResponse']
 
             # Invoke generateResponseLambda to get the actual response
-            actual_response = invoke_generate_response_lambda(question)
+            actual_response = invoke_generate_response_lambda(lambda_client, question)
 
             # Evaluate the response using RAGAS
             response = evaluate_with_ragas(question, expected_response, actual_response)
             if response['status'] == 'error':
+                print("error status going to next iteration")
                 continue
             else:
                 similarity = response['scores']['similarity']
@@ -177,8 +180,12 @@ def invoke_generate_response_lambda(lambda_client, question):
     
 def evaluate_with_ragas(question, expected_response, actual_response):
     try:
+        # move large imports here to avoid global imports that can timeout initialization
+        from datasets import Dataset
+        from ragas import evaluate
+        from ragas.metrics import answer_correctness, answer_similarity, answer_relevancy
         # Metrics to evaluate
-        metrics = [answer_correctness, answer_similarity, answer_relevancy]
+        metrics = [answer_correctness, answer_similarity, answer_relevancy] 
 
         # Prepare the data sample
         data_sample = {
@@ -187,22 +194,22 @@ def evaluate_with_ragas(question, expected_response, actual_response):
             "reference": [expected_response],
             "retrieved_contexts": [[expected_response]]  # Assuming expected response as context
         }
-
+ 
         data_samples = Dataset.from_dict(data_sample)
 
         # Load the LLM and embeddings
         region_name = 'us-east-1'
-        model_id = os.environ.get('BEDROCK_MODEL_ID')
 
         bedrock_model = BedrockChat(
             region_name=region_name,
             endpoint_url=f"https://bedrock-runtime.{region_name}.amazonaws.com",
-            model_id=model_id,
+            model_id=BEDROCK_MODEL_ID,
             model_kwargs={},
         )
 
         bedrock_embeddings = BedrockEmbeddings(
             region_name=region_name,
+            model_id='amazon.titan-embed-text-v1',
         )
 
         # Evaluate sample
@@ -215,7 +222,8 @@ def evaluate_with_ragas(question, expected_response, actual_response):
 
         # Get the scores from the result
         scores = result.to_pandas().iloc[0]
-        similarity = scores['answer_similarity']
+        print("scores: ", scores)
+        similarity = scores['semantic_similarity']
         relevance = scores['answer_relevancy']
         correctness = scores['answer_correctness']
 
@@ -228,8 +236,9 @@ def evaluate_with_ragas(question, expected_response, actual_response):
             }
         }
     except Exception as e:
+        print(e)
         logging.error(f"Error in RAGAS evaluation: {str(e)}")
         return {
             "status": "error",
             "error": str(e)
-        }
+        } 

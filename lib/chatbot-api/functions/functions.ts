@@ -8,6 +8,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as bedrock from "aws-cdk-lib/aws-bedrock";
+import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
 
 interface LambdaFunctionStackProps {  
   readonly wsApiEndpoint : string;  
@@ -244,14 +245,44 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.generateResponseFunction = generateResponseFunction;
 
+    const evalResultsAPIHandlerFunction = new lambda.Function(scope, 'EvalResultsHandlerFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'eval-results-handler')), // Points to the lambda directory
+      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "EVALUATION_RESULTS_TABLE" : props.evalResutlsTable.tableName,
+        "EVALUATION_SUMMARIES_TABLE" : props.evalSummariesTable.tableName
+      }
+    });
+    evalResultsAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({ 
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'dynamodb:GetItem',
+        'dynamodb:PutItem',
+        'dynamodb:UpdateItem',
+        'dynamodb:DeleteItem',
+        'dynamodb:Query',
+        'dynamodb:Scan'
+      ],
+      resources: [props.evalResutlsTable.tableArn, props.evalResutlsTable.tableArn + "/index/*", props.evalSummariesTable.tableArn, props.evalSummariesTable.tableArn + "/index/*"]
+    }));
+    this.handleEvalResultsFunction = evalResultsAPIHandlerFunction;
+    props.evalResutlsTable.grantReadWriteData(evalResultsAPIHandlerFunction);
+    props.evalSummariesTable.grantReadWriteData(evalResultsAPIHandlerFunction);
+
     const llmEvalFunction = new lambda.DockerImageFunction(scope, 'llmEvaluationFunction', {
-      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, 'llm-evaluation')),
+      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, 'llm-evaluation'), {
+        platform: Platform.LINUX_AMD64, // Specify the correct platform
+      }),
       environment: {
         "RESULTS_TABLE" : props.evalResutlsTable.tableName, 
         "TEST_CASES_BUCKET" : props.evalTestCasesBucket.bucketName, 
         "GENERATE_RESPONSE_LAMBDA_NAME" : generateResponseFunction.functionName,
-        "BEDROCK_MODEL_ID" : props.knowledgeBase.attrKnowledgeBaseId
-      }
+        "BEDROCK_MODEL_ID" : "anthropic.claude-3-haiku-20240307-v1:0",
+        "EVAL_RESULTS_HANDLER_LAMBDA_NAME": evalResultsAPIHandlerFunction.functionName, // Include this if needed
+      },
+      timeout: cdk.Duration.seconds(600),
+      memorySize: 4096
     });
     llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
@@ -277,29 +308,19 @@ export class LambdaFunctionStack extends cdk.Stack {
       ],
       resources: ['*']
     }));
-    this.llmEvalFunction = llmEvalFunction;
-
-    const evalResultsAPIHandlerFunction = new lambda.Function(scope, 'EvalResultsHandlerFunction', {
-      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
-      code: lambda.Code.fromAsset(path.join(__dirname, 'eval-results-handler')), // Points to the lambda directory
-      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
-      environment: {
-        "EVALUATION_RESULTS_TABLE" : props.evalResutlsTable.tableName,
-        "EVALUATION_SUMMARIES_TABLE" : props.evalSummariesTable.tableName
-      }
-    });
-    evalResultsAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({ 
+    llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
-        'dynamodb:GetItem',
-        'dynamodb:PutItem',
-        'dynamodb:UpdateItem',
-        'dynamodb:DeleteItem',
-        'dynamodb:Query',
-        'dynamodb:Scan'
+        'bedrock:InvokeModelWithResponseStream',
+        'bedrock:InvokeModel'
       ],
-      resources: [props.evalResutlsTable.tableArn, props.evalResutlsTable.tableArn + "/index/*", props.evalSummariesTable.tableArn, props.evalSummariesTable.tableArn + "/index/*"]
+      resources: ['*']
     }));
-    this.handleEvalResultsFunction = evalResultsAPIHandlerFunction;
+
+    props.evalResutlsTable.grantReadWriteData(llmEvalFunction);
+    props.evalTestCasesBucket.grantReadWrite(llmEvalFunction);
+    generateResponseFunction.grantInvoke(llmEvalFunction);
+    evalResultsAPIHandlerFunction.grantInvoke(llmEvalFunction);
+    this.llmEvalFunction = llmEvalFunction;
   }
 }

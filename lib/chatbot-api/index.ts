@@ -166,6 +166,19 @@ export class ChatBotApi extends Construct {
       authorizer: httpAuthorizer,
     })
 
+    const evalResultsHandlerIntegration = new HttpLambdaIntegration(
+      'EvalResultsHandlerIntegration',
+      lambdaFunctions.handleEvalResultsFunction
+    );
+
+    restBackend.restAPI.addRoutes({
+      path: "/eval-results-handler",
+      methods: [apigwv2.HttpMethod.POST],
+      integration: evalResultsHandlerIntegration,
+      authorizer: httpAuthorizer,
+    });
+
+
       // this.wsAPI = websocketBackend.wsAPI;
 
 

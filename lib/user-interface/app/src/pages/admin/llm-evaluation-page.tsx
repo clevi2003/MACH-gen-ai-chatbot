@@ -146,9 +146,10 @@ import {
                     label: "Past Evaluations",
                     id: "past-evals",
                     content: (
-                        <PastEvalsTab 
+                      <PastEvalsTab 
                         tabChangeFunction={() => setActiveTab("past-evals")}
-                        />
+                        documentType="evaluationSummary"
+                      />
                     ),
                     },
                     {

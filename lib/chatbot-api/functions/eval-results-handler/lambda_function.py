@@ -67,7 +67,7 @@ def add_evaluation(evaluation_id, evaluation_name, average_similarity,
     
 # function to retrieve all summaries from DynamoDB
 def get_evaluation_summaries():
-    try:
+    try: 
         response = summaries_table.scan()
         items = response.get('Items', [])
 
