@@ -2,6 +2,24 @@ import { AdminDataType } from "../../common/types";
 import { DateTime } from "luxon";
 import { Utils } from "../../common/utils";
 import { Button } from "@cloudscape-design/components";
+import { useNavigate } from "react-router-dom";
+import React from "react";
+
+
+function ViewDetailsButton({ evaluationId }) {
+  const navigate = useNavigate();
+  console.log("evaluationId: ", evaluationId);
+
+  const viewDetailedEvaluation = (evaluationId) => {
+    navigate(`/admin/llm-evaluation/${evaluationId}`);
+  };
+
+  return (
+    <Button onClick={() => viewDetailedEvaluation(evaluationId)} variant="link">
+      View Details
+    </Button>
+  );
+}
 
 
 const FILES_COLUMN_DEFINITIONS = [
@@ -56,11 +74,17 @@ const FEEDBACK_COLUMN_DEFINITIONS = [
 ];
 
 const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
-  {
+  { 
     id: "evaluationName",
     header: "Evaluation Name",
     cell: (item) => item.evaluation_name || "Unnamed Evaluation",
     sortingField: "evaluation_name",
+  },
+  {
+    id: "evalTestCaseKey",
+    header: "Test Case Filename",
+    cell: (item) => item.test_case_key || "Unnamed Test Case",
+    sortingField: "test_case_key",
   },
   {
     id: "timestamp",
@@ -98,25 +122,26 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
   },
   {
     id: "viewDetails",
-    header: "View Detailed Evaluation",
-    cell: (item) => (
-      <Button
-        onClick={() => item.viewDetailedEvaluation(item.evaluation_id)}
-        //onClick={() => navigate(`/admin/llm-evaluation/${item.evaluationId}`)}
-        variant="link"
-      >
-        View Details
-      </Button>
-    ),
+    header: "View Details",
+    cell: (item) => <ViewDetailsButton evaluationId={item.EvaluationId}/>,
   }, 
 ];
 
 const DETAILED_EVAL_COLUMN_DEFINITIONS = [
   {
-    id: "documentName",
-    header: "Document Name",
-    cell: (item) => item.document_name || "Unnamed Document",
-    sortingField: "document_name",
+    id: "question",
+    header: "Question",
+    cell: (item) => item.question,
+  },
+  {
+    id: "expectedResponse",
+    header: "Expected Response",
+    cell: (item) => item.expected_response,
+  },
+  {
+    id: "actualResponse",
+    header: "Actual Response",
+    cell: (item) => item.actual_response,
   },
   {
     id: "similarity",

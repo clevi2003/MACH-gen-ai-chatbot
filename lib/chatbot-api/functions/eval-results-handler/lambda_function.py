@@ -28,7 +28,7 @@ def convert_from_decimal(item):
 
 # function to add a new evaluation (summary and detailed results) to DynamoDB
 def add_evaluation(evaluation_id, evaluation_name, average_similarity,
-                   average_relevance, average_correctness, total_questions, detailed_results):
+                   average_relevance, average_correctness, total_questions, detailed_results, test_cases_key):
     try:
         timestamp = str(datetime.now())
         # eval id is len of summaries table
@@ -40,7 +40,8 @@ def add_evaluation(evaluation_id, evaluation_name, average_similarity,
             'average_relevance': Decimal(str(average_relevance)),
             'average_correctness': Decimal(str(average_correctness)),
             'total_questions': total_questions,
-            'evaluation_name': evaluation_name.strip() if evaluation_name else None
+            'evaluation_name': evaluation_name.strip() if evaluation_name else None,
+            'test_cases_key': test_cases_key
         }
         print("summary_item: ", summary_item)
 
@@ -60,7 +61,8 @@ def add_evaluation(evaluation_id, evaluation_name, average_similarity,
                     'actual_response': result['actualResponse'],
                     'similarity': Decimal(str(result['similarity'])),
                     'relevance': Decimal(str(result['relevance'])),
-                    'correctness': Decimal(str(result['correctness']))
+                    'correctness': Decimal(str(result['correctness'])),
+                    'test_cases_key': test_cases_key
                 }
                 print("result_item: ", result_item)
                 batch.put_item(Item=result_item)
@@ -112,7 +114,9 @@ def get_evaluation_results(evaluation_id):
         response = results_table.query(
             KeyConditionExpression=boto3.dynamodb.conditions.Key('EvaluationId').eq(evaluation_id)
         )
+        print("response from eval handler: ", response)
         items = response.get('Items', [])
+        print("items from eval handler: ", items)
 
         # Sort items by QuestionId
         sorted_items = sorted(items, key=lambda x: int(x['QuestionId']))
@@ -140,9 +144,10 @@ def lambda_handler(event, context):
     average_correctness = data.get('average_correctness')
     detailed_results = data.get('detailed_results', [])
     total_questions = data.get('total_questions', len(detailed_results))
+    test_cases_key = data.get('test_cases_key')
 
     if operation == 'add_evaluation':
-        if not all([average_similarity, average_relevance, average_correctness, total_questions, detailed_results]):
+        if not all([average_similarity, average_relevance, average_correctness, total_questions, detailed_results, test_cases_key]):
             return {
                 'statusCode': 400,
                 'headers': {'Access-Control-Allow-Origin': '*'},
@@ -155,7 +160,8 @@ def lambda_handler(event, context):
             average_relevance,
             average_correctness,
             total_questions,
-            detailed_results
+            detailed_results, 
+            test_cases_key
         )
     elif operation == 'get_evaluation_summaries':
         return get_evaluation_summaries()

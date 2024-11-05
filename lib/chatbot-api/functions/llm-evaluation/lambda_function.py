@@ -91,6 +91,7 @@ def lambda_handler(event, context):
 
         payload = {
             'operation': 'add_evaluation',
+            "test_cases_key": test_cases_key,
             'evaluation_id': evaluation_id,
             'evaluation_name': evaluation_name,
             'average_similarity': average_similarity,
