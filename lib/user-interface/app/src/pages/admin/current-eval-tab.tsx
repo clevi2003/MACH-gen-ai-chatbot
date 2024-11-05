@@ -159,11 +159,10 @@ export default function Evaluation() {
                 ]}
                 xDomain={[1, 5]}
                 yDomain={[50, 100]}// Adjust based on the data range
-                xTickValues={[1, 2, 3, 4, 5]}
                 i18nStrings={{
                   legendAriaLabel: "Legend",
                   chartAriaRoleDescription: "line chart",
-                  xTickFormatter: value => value,
+                  xTickFormatter: value => `${value}`,
                   yTickFormatter: value => `${(value).toFixed(0)}%`,
                 }}
                 ariaLabel="Metrics over time"
