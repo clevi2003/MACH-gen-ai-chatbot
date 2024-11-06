@@ -15,8 +15,9 @@ import useOnFollow from "../../common/hooks/use-on-follow";
 import FeedbackTab from "./feedback-tab";
 import FeedbackPanel from "../../components/feedback-panel";
 import { CHATBOT_NAME } from "../../common/constants";
+import { getColumnDefinition } from "./columns";
 import { useCollection } from "@cloudscape-design/collection-hooks";
-import { useState, useEffect, useMemo, useContext, useCallback } from "react";
+import { useState, useEffect, useMemo, useContext, useCallback, useRef } from "react";
 import { useNotifications } from "../../components/notif-manager";
 import { Auth } from "aws-amplify";
 import { ApiClient } from "../../common/api-client/api-client"; 
@@ -34,9 +35,12 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
   const [metrics, setMetrics] = useState<any>({});
   const [admin, setAdmin] = useState<boolean>(false);
   const apiClient = useMemo(() => new ApiClient(appContext), [appContext])
+  const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [evaluations, setEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
   const { addNotification } = useNotifications();
+  const needsRefresh = useRef(false);
+  const [pages, setPages] = useState([]);
 
   const { items, collectionProps, paginationProps } = useCollection(evaluations, {
     pagination: { pageSize: 10 },
@@ -50,25 +54,33 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
     },
   });
 
-  /** Function to get evaluations */
+
   const getEvaluations = useCallback(async () => {
     setLoading(true);
     try {
       const result = await apiClient.evaluations.getEvaluationSummaries();
-      console.log("results from api: ", result);
-      setEvaluations(result);
+      console.log("result: ", result);
+      
+      // Take only the first 10 evaluations
+      const firstTenEvaluations = result.Items.slice(0, 10)
+      
+      // Update state with just these evaluations
+      setEvaluations(firstTenEvaluations);
     } catch (error) {
-      console.log("error: ", error);
       console.error(Utils.getErrorMessage(error));
       addNotification("error", "Error fetching evaluations");
     } finally {
       setLoading(false);
     }
-  }, [apiClient, addNotification]);
+  }, [apiClient, addNotification]
+
+);
   
-  useEffect(() => {
-    getEvaluations();
-  }, [getEvaluations]);
+
+  
+useEffect(() => {
+  getEvaluations();
+}, [getEvaluations]);
 
   useEffect(() => {
     (async () => {
@@ -116,46 +128,34 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
   if (loading) {
     return <div>Loading...</div>;
   }
-
+  
   if (items.length === 0) {
+    console.log("items: ", items);
     return <div>No evaluations found.</div>;
   }
 
 
   // Sample scores
   const last_entry = items[0];
-  console.log("items: ", items);
-  console.log(typeof items);
-  console.log("last entry: ", last_entry);
-  console.log(typeof last_entry);
   const acc_score = last_entry['average_correctness'] * 100; // Score out of 100
   const rel_score = last_entry['average_relevance'] * 100; // Score out of 100
   const sim_score = last_entry['average_similarity'] * 100; // Score out of 100
 
-  // Sample data for the combined line chart with time on the x-axis
-  const accuracyData = [
-    { x: 1, y: 80 },
-    { x: 2, y: 85 },
-    { x: 3, y: 83 },
-    { x: 4, y: 87 },
-    { x: 5, y: 90 },
-  ];
+  // Create arrays for accuracy, relevancy, and similarity data based on items
+  const accuracyData = items.map((item, index) => ({
+    x: new Date(item.Timestamp).getTime(),
+    y: item['average_correctness'] * 100 // Score out of 100
+  }));
 
-  const relevancyData = [
-    { x: 1, y: 55 },
-    { x: 2, y: 60 },
-    { x: 3, y: 62 },
-    { x: 4, y: 58 },
-    { x: 5, y: 63 },
-  ];
+  const relevancyData = items.map((item, index) => ({
+    x: new Date(item.Timestamp).getTime(),
+    y: item['average_relevance'] * 100
+  }));
 
-  const similarityData = [
-    { x: 1, y: 88 },
-    { x: 2, y: 89 },
-    { x: 3, y: 90 },
-    { x: 4, y: 92 },
-    { x: 5, y: 91 },
-  ]; 
+  const similarityData = items.map((item, index) => ({
+    x: new Date(item.Timestamp).getTime(),
+    y: item['average_similarity'] * 100
+  }));
 
   return (    
           <SpaceBetween size="xxl" direction="vertical">
@@ -197,14 +197,27 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
                   { title: "Relevancy", type: "line", data: relevancyData },
                   { title: "Similarity", type: "line", data: similarityData },
                 ]}
-                xDomain={[1, 5]}
+                xDomain={[
+                  Math.min(...items.map(i => new Date(i.Timestamp).getTime())), 
+                  Math.max(...items.map(i => new Date(i.Timestamp).getTime()))
+                ]}
                 yDomain={[50, 100]}// Adjust based on the data range
                 //xTickValues={[1, 2, 3, 4, 5]}
                 i18nStrings={{
                   legendAriaLabel: "Legend",
                   chartAriaRoleDescription: "line chart",
-                  xTickFormatter: value => value.toString(),
-                  yTickFormatter: value => `${(value).toFixed(0)}%`,
+                  xTickFormatter: value =>
+                    new Date(value)
+                      .toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: false
+                      })
+                      .split(",")
+                      .join("\n"),
+                  yTickFormatter: value => `${value.toFixed(0)}%`,
                 }}
                 ariaLabel="Metrics over time"
               />

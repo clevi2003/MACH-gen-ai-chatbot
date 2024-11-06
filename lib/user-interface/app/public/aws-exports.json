@@ -1,10 +1,10 @@
 {
   "Auth": {
     "region": "us-east-1",
-    "userPoolId": "us-east-1_ajkIFLqgX",
-    "userPoolWebClientId": "6o3msm0s4ajfh3heu6i8mngl0c",
+    "userPoolId": "us-east-1_mK6kWUb26",
+    "userPoolWebClientId": "lj77f8qc6mkc4ebsslin7qv9m",
     "oauth": {
-      "domain": "genaimvp-auth.auth.us-east-1.amazoncognito.com",
+      "domain": "llm-eval-mvp-auth.auth.us-east-1.amazoncognito.com",
       "scope": [
         "aws.cognito.signin.user.admin",
         "email",
@@ -16,7 +16,7 @@
       "responseType": "code"
     }
   },
-  "httpEndpoint": "https://g16qwekzne.execute-api.us-east-1.amazonaws.com/",
-  "wsEndpoint": "wss://cwoluaiom8.execute-api.us-east-1.amazonaws.com/prod",
+  "httpEndpoint": "https://9ojzvxn95g.execute-api.us-east-1.amazonaws.com/",
+  "wsEndpoint": "wss://5rw83iqkhh.execute-api.us-east-1.amazonaws.com/prod",
   "federatedSignInProvider": ""
 }
