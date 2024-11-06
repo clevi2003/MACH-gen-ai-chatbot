@@ -1,12 +1,13 @@
 // src/pages/admin/detailed-evaluation-page.js
 
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import {
   Table,
   Header,
   Button,
   BreadcrumbGroup,
   Box,
+  Pagination,
   StatusIndicator,
 } from "@cloudscape-design/components";
 import { useParams, useNavigate } from "react-router-dom";
@@ -16,6 +17,7 @@ import { ApiClient } from "../../common/api-client/api-client";
 import { Utils } from "../../common/utils";
 import { getColumnDefinition } from "./columns";
 import { useNotifications } from "../../components/notif-manager";
+import { useCollection } from "@cloudscape-design/collection-hooks";
 import { AdminDataType } from "../../common/types";
 
 export interface DetailedEvalProps {
@@ -31,24 +33,56 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
   const [loading, setLoading] = useState(true);
   const { addNotification } = useNotifications();
   const [evaluationName, setEvaluationName] = useState("");
+  const [currentPageIndex, setCurrentPageIndex] = useState(1);
+  const [pages, setPages] = useState([]);
+  const needsRefresh = useRef(false);
+
 
   useEffect(() => {
-    fetchEvaluationDetails();
-  }, []);
+    setCurrentPageIndex(1);
+    fetchEvaluationDetails({ pageIndex: 1 });
+  }, [evaluationId]);
+  
 
-  const fetchEvaluationDetails = async () => {
+  const fetchEvaluationDetails = async (params : { pageIndex?: number, nextPageToken? }) => {
     setLoading(true);
     try {
-      const result = await apiClient.evaluations.getEvaluationResults(
-        evaluationId
-      );
-      setEvaluationDetails(result);
-      setEvaluationName(result[0].evaluation_name);
+      const result = await apiClient.evaluations.getEvaluationResults(evaluationId, params.nextPageToken);
+      setPages((current) => {
+        if (needsRefresh.current) {
+          needsRefresh.current = false;
+          return [result];
+        }
+        if (typeof params.pageIndex !== "undefined") {
+          current[params.pageIndex - 1] = result;
+          return [...current];
+        } else {
+          return [...current, result];
+        }
+      });
+      if (result.Items && result.Items.length > 0) {
+        setEvaluationName(result.Items[0].evaluation_name);
+      }
     } catch (error) {
       console.error(Utils.getErrorMessage(error));
       addNotification("error", "Error fetching evaluation details");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const onNextPageClick = async () => {
+    const continuationToken = pages[currentPageIndex - 1]?.NextPageToken;
+    if (continuationToken) {
+      if (pages.length <= currentPageIndex || needsRefresh.current) {
+        await fetchEvaluationDetails({ nextPageToken: continuationToken });
+      }
+      setCurrentPageIndex((current) => Math.min(pages.length + 1, current + 1));
+    }
+  };
+  
+  const onPreviousPageClick = () => {
+    setCurrentPageIndex((current) => Math.max(1, current - 1));
   };
 
   const breadcrumbItems = [
@@ -78,7 +112,7 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
           <Table
             loading={loading}
             loadingText="Loading evaluation details"
-            items={evaluationDetails}
+            items={pages[Math.min(pages.length - 1, currentPageIndex - 1)]?.Items || []}
             columnDefinitions={columnDefinitions}
             trackBy="question_id"
             empty={
@@ -89,6 +123,17 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
               </Box>
             }
             header={<Header>Detailed Results</Header>}
+            pagination={
+              pages.length === 0 ? null : (
+                <Pagination
+                  openEnd={true}
+                  pagesCount={pages.length}
+                  currentPageIndex={currentPageIndex}
+                  onNextPageClick={onNextPageClick}
+                  onPreviousPageClick={onPreviousPageClick}
+                />
+              )
+            }
           />
         </>
       }

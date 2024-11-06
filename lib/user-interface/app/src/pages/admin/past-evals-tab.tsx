@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, useCallback, useMemo } from "react";
+import React, { useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Box,
   SpaceBetween,
@@ -27,8 +27,11 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
   const apiClient = useMemo(() => new ApiClient(appContext), [appContext]);
   const [loading, setLoading] = useState(true);
   const [evaluations, setEvaluations] = useState([]);
-  const navigate = useNavigate();
   const { addNotification } = useNotifications();
+  const [currentPageIndex, setCurrentPageIndex] = useState(1);
+  const [pages, setPages] = useState([]);
+  const needsRefresh = useRef(false);
+
 
   const { items, collectionProps, paginationProps } = useCollection(evaluations, {
     pagination: { pageSize: 10 },
@@ -42,28 +45,55 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
     },
   });
 
-  /** Function to get evaluations */
-  const getEvaluations = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await apiClient.evaluations.getEvaluationSummaries();
-      setEvaluations(result);
-    } catch (error) {
-      console.log("error: ", error);
-      console.error(Utils.getErrorMessage(error));
-      addNotification("error", "Error fetching evaluations");
-    } finally {
-      setLoading(false);
-    }
-  }, [apiClient, addNotification]);
+  /** Function to get evaluations from api*/
+  const getEvaluations = useCallback(
+    async (params : { pageIndex?: number, nextPageToken? }) => {
+      setLoading(true);
+      try {
+        const result = await apiClient.evaluations.getEvaluationSummaries(params.nextPageToken);
+        setPages((current) => {
+          if (needsRefresh.current) {
+            needsRefresh.current = false;
+            return [result];
+          }
+          if (typeof params.pageIndex !== "undefined") {
+            current[params.pageIndex - 1] = result;
+            return [...current];
+          } else {
+            return [...current, result];
+          }
+        });
+      } catch (error) {
+        console.error(Utils.getErrorMessage(error));
+        addNotification("error", "Error fetching evaluations");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [apiClient, addNotification, needsRefresh]
+  );
 
   useEffect(() => {
-    getEvaluations();
+    setCurrentPageIndex(1);
+    if (needsRefresh.current) {
+      getEvaluations({ pageIndex: 1 });
+    } else {
+      getEvaluations({ pageIndex: currentPageIndex });
+    }
   }, [getEvaluations]);
 
-  /** View detailed evaluation */
-  const viewDetailedEvaluation = (evaluationId: string) => {
-    navigate(`/admin/llm-evaluation/${evaluationId}`);
+  const onNextPageClick = async () => {
+    const continuationToken = pages[currentPageIndex - 1]?.NextPageToken;
+    if (continuationToken) {
+      if (pages.length <= currentPageIndex || needsRefresh.current) {
+        await getEvaluations({ nextPageToken: continuationToken });
+      }
+      setCurrentPageIndex((current) => Math.min(pages.length + 1, current + 1));
+    }
+  };
+  
+  const onPreviousPageClick = () => {
+    setCurrentPageIndex((current) => Math.max(1, current - 1));
   };
 
   const columnDefinitions = getColumnDefinition(props.documentType);
@@ -74,13 +104,13 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
       loading={loading}
       loadingText={"Loading evaluations"}
       columnDefinitions={columnDefinitions}
-      items={items}
+      items={pages[Math.min(pages.length - 1, currentPageIndex - 1)]?.Items || []}
       trackBy="evaluation_id"
       header={
         <Header
           actions={
             <SpaceBetween direction="horizontal" size="xs">
-              <Button iconName="refresh" onClick={getEvaluations} />
+              <Button iconName="refresh" onClick={() => getEvaluations({ pageIndex: currentPageIndex })} />
             </SpaceBetween>
           }
         >
@@ -92,7 +122,17 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
           <StatusIndicator type="warning">No evaluations found</StatusIndicator>
         </Box>
       }
-      pagination={<Pagination {...paginationProps} />}
+      pagination={
+        pages.length === 0 ? null : (
+          <Pagination
+            openEnd={true}
+            pagesCount={pages.length}
+            currentPageIndex={currentPageIndex}
+            onNextPageClick={onNextPageClick}
+            onPreviousPageClick={onPreviousPageClick}
+          />
+        )
+      }
     />
   );
 }

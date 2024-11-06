@@ -81,23 +81,26 @@ def add_evaluation(evaluation_id, evaluation_name, average_similarity,
         }
     
 # function to retrieve all summaries from DynamoDB
-def get_evaluation_summaries():
+def get_evaluation_summaries(continuation_token=None, limit=10):
     try: 
-        response = summaries_table.scan()
+        scan_params = {'Limit': limit}
+        if continuation_token:
+            scan_params['ExclusiveStartKey'] = continuation_token
+        response = summaries_table.scan(**scan_params)
         items = response.get('Items', [])
+        last_evaluated_key = response.get('LastEvaluatedKey')
 
-        # Sort items by timestamp in descending order
+        # Sort items by timestamp in descending order and build response
         sorted_items = sorted(items, key=lambda x: x['Timestamp'], reverse=True)
-        print("response from eval handler: ", {
-            'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps(convert_from_decimal(sorted_items))
-        })
+        response_body = {
+            'Items': convert_from_decimal(sorted_items),
+            'NextPageToken': last_evaluated_key
+        }
 
         return {
             'statusCode': 200,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps(convert_from_decimal(sorted_items))
+            'body': json.dumps(response_body)
         }
     except ClientError as error:
         print("Caught error: DynamoDB error - could not retrieve evaluation summaries")
@@ -108,23 +111,32 @@ def get_evaluation_summaries():
         }
     
 # function to retrieve detailed results for a specific evaluation from DynamoDB
-def get_evaluation_results(evaluation_id):
+def get_evaluation_results(evaluation_id, continuation_token=None, limit=10):
     try:
+        query_params = {
+            'KeyConditionExpression': boto3.dynamodb.conditions.Key('EvaluationId').eq(evaluation_id),
+            'Limit': limit
+        }
+        if continuation_token:
+            query_params['ExclusiveStartKey'] = continuation_token
+        
         # Query the results table for the given evaluation_id
-        response = results_table.query(
-            KeyConditionExpression=boto3.dynamodb.conditions.Key('EvaluationId').eq(evaluation_id)
-        )
+        response = results_table.query(**query_params)
         print("response from eval handler: ", response)
         items = response.get('Items', [])
-        print("items from eval handler: ", items)
+        last_evaluated_key = response.get('LastEvaluatedKey')
 
-        # Sort items by QuestionId
+        # Sort items by QuestionId and build response body
         sorted_items = sorted(items, key=lambda x: int(x['QuestionId']))
+        response_body = {
+            'Items': convert_from_decimal(sorted_items),
+            'NextPageToken': last_evaluated_key
+        }
 
         return {
             'statusCode': 200,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps(convert_from_decimal(sorted_items))
+            'body': json.dumps(response_body)
         }
     except ClientError as error:
         print("Caught error: DynamoDB error - could not retrieve evaluation results")
@@ -145,6 +157,8 @@ def lambda_handler(event, context):
     detailed_results = data.get('detailed_results', [])
     total_questions = data.get('total_questions', len(detailed_results))
     test_cases_key = data.get('test_cases_key')
+    continuation_token = data.get('continuation_token')
+    limit = data.get('limit', 10)
 
     if operation == 'add_evaluation':
         if not all([average_similarity, average_relevance, average_correctness, total_questions, detailed_results, test_cases_key]):
@@ -164,7 +178,7 @@ def lambda_handler(event, context):
             test_cases_key
         )
     elif operation == 'get_evaluation_summaries':
-        return get_evaluation_summaries()
+        return get_evaluation_summaries(continuation_token, limit)
     elif operation == 'get_evaluation_results':
         if not evaluation_id:
             return {
@@ -172,7 +186,7 @@ def lambda_handler(event, context):
                 'headers': {'Access-Control-Allow-Origin': '*'},
                 'body': json.dumps('evaluation_id is required for retrieving evaluation results.')
             }
-        return get_evaluation_results(evaluation_id)
+        return get_evaluation_results(evaluation_id, continuation_token, limit)
     else:
         return {
             'statusCode': 400,

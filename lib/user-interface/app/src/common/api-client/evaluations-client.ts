@@ -8,15 +8,23 @@ export class EvaluationsClient {
   }
 
   // Fetch evaluation summaries
-  async getEvaluationSummaries(continuationToken?: string, pageIndex?: number) {
+  async getEvaluationSummaries(continuationToken?: any, limit: number = 10) {
     const auth = await Utils.authenticate();
-    const response = await fetch(this.API + "/eval-results-handler", {
+    const body: any = {
+      operation: "get_evaluation_summaries",
+      limit,
+    };
+    if (continuationToken) {
+      body.continuation_token = continuationToken;
+    }
+
+    const response = await fetch(`${this.API}/eval-results-handler`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: auth,
       },
-      body: JSON.stringify({ operation: "get_evaluation_summaries" }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       throw new Error("Failed to get evaluation summaries");
@@ -27,25 +35,30 @@ export class EvaluationsClient {
   }
 
   // Fetch detailed evaluation results
-  async getEvaluationResults(evaluationId: string) {
+  async getEvaluationResults(evaluationId: string, continuationToken?: any, limit: number = 10) {
     const auth = await Utils.authenticate();
-    const response = await fetch(this.API + "/eval-results-handler", {
+    const body: any = {
+      operation: "get_evaluation_results",
+      evaluation_id: evaluationId,
+      limit,
+    };
+    if (continuationToken) {
+      body.continuation_token = continuationToken;
+    }
+
+    const response = await fetch(`${this.API}/eval-results-handler`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: auth,
       },
-      body: JSON.stringify({
-        operation: "get_evaluation_results",
-        evaluation_id: evaluationId,
-      }),
+      body: JSON.stringify(body),
     });
- 
     if (!response.ok) {
       throw new Error("Failed to get evaluation results");
     }
 
     const result = await response.json();
-    return result; // Adjust based on your API response
+    return result;
   }
 }
