@@ -4,6 +4,7 @@ import { Utils } from "../../common/utils";
 import { Button } from "@cloudscape-design/components";
 import { useNavigate } from "react-router-dom";
 import React from "react";
+import { TruncatedTextCell } from "../../components/truncated-text-call";
 
 
 function ViewDetailsButton({ evaluationId }) {
@@ -77,13 +78,13 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
   { 
     id: "evaluationName",
     header: "Evaluation Name",
-    cell: (item) => item.evaluation_name || "Unnamed Evaluation",
+    cell: (item) => <TruncatedTextCell text={item.evaluation_name || "Unnamed Evaluation"} maxLength={50}/>,
     sortingField: "evaluation_name",
   },
   {
     id: "evalTestCaseKey",
     header: "Test Case Filename",
-    cell: (item) => item.test_case_key || "Unnamed Test Case",
+    cell: (item) => <TruncatedTextCell text={item.test_case_key || "Unnamed Test Case"} maxLength={50}/>,
     sortingField: "test_case_key",
   },
   {
@@ -137,23 +138,17 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
   {
     id: "question",
     header: "Question",
-    cell: (item) => item.question,
-    width: "23%",
-    wrapText: true
+    cell: (item) => <TruncatedTextCell text={item.question} maxLength={50}/>
   },
   {
     id: "expectedResponse",
     header: "Expected Response",
-    cell: (item) => item.expected_response,
-    width: "23%",
-    wrapText: true
+    cell: (item) => <TruncatedTextCell text={item.expected_response} maxLength={50}/>
   },
   {
     id: "actualResponse",
     header: "Actual Response",
-    cell: (item) => item.actual_response,
-    width: "23%",
-    wrapText: true
+    cell: (item) => <TruncatedTextCell text={item.actual_response} maxLength={50}/>
   },
   {
     id: "similarity",
@@ -161,9 +156,7 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
     cell: (item) =>
       (
         parseFloat(item.similarity) 
-      ).toFixed(2),
-    width: "11%",
-    wrapText: true
+      ).toFixed(2)
   },
   {
     id: "relevance",
@@ -171,9 +164,7 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
     cell: (item) =>
     (
       parseFloat(item.relevance) 
-    ).toFixed(2),
-    width: "10%",
-    wrapText: true
+    ).toFixed(2)
   },
   {
     id: "correctness",
@@ -181,9 +172,7 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
     cell: (item) =>
     (
       parseFloat(item.correctness) 
-    ).toFixed(2),
-    width: "10%",
-    wrapText: true
+    ).toFixed(2)
   },
 ];
 
