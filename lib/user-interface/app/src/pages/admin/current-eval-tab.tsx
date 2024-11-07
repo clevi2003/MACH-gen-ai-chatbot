@@ -169,7 +169,7 @@ useEffect(() => {
               <Container header={<Header variant="h3">Accuracy</Header>}>
                 <ProgressBar
                   value={acc_score}
-                  description="Correctness of a given answer"
+                  description="Correctness of different facts within a given answer"
                   resultText={`${acc_score}%`}
                 />
               </Container>

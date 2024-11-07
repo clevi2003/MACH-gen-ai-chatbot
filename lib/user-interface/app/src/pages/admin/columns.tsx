@@ -78,14 +78,12 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
   { 
     id: "evaluationName",
     header: "Evaluation Name",
-    cell: (item) => <TruncatedTextCell text={item.evaluation_name || "Unnamed Evaluation"} maxLength={50}/>,
-    sortingField: "evaluation_name",
+    cell: (item) => <TruncatedTextCell text={item.evaluation_name || "Unnamed Evaluation"} maxLength={50}/>
   },
   {
     id: "evalTestCaseKey",
     header: "Test Case Filename",
-    cell: (item) => <TruncatedTextCell text={item.test_case_key || "Unnamed Test Case"} maxLength={50}/>,
-    sortingField: "test_case_key",
+    cell: (item) => <TruncatedTextCell text={item.test_case_key || "Unnamed Test Case"} maxLength={50}/>
   },
   {
     id: "timestamp",
@@ -96,6 +94,7 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
         DateTime.DATETIME_SHORT
       ),
     sortingField: "Timestamp",
+    sortingComparator: (a, b) => new Date(a.Timestamp).getTime() - new Date(b.Timestamp).getTime()
   },
   {
     id: "averageSimilarity",
@@ -104,6 +103,8 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
       (
         parseFloat(item.average_similarity) 
       ).toFixed(2),
+    sortingField: "average_similarity",
+    sortingComparator: (a, b) => parseFloat(a.average_similarity) - parseFloat(b.average_similarity),
     width: "10%",
     wrapText: true
   },
@@ -114,6 +115,8 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
     (
       parseFloat(item.average_relevance) 
     ).toFixed(2),
+    sortingField: "average_relevance",
+    sortingComparator: (a, b) => parseFloat(a.average_relevance) - parseFloat(b.average_relevance),
     width: "10%",
     wrapText: true
   },
@@ -124,6 +127,8 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
     (
       parseFloat(item.average_correctness) 
     ).toFixed(2),
+    sortingField: "average_correctness",
+    sortingComparator: (a, b) => parseFloat(a.average_correctness) - parseFloat(b.average_correctness),
     width: "10%",
     wrapText: true 
   },
@@ -131,6 +136,7 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
     id: "viewDetails",
     header: "View Details",
     cell: (item) => <ViewDetailsButton evaluationId={item.EvaluationId}/>,
+    disableSort: true
   }, 
 ];
 
@@ -156,7 +162,8 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
     cell: (item) =>
       (
         parseFloat(item.similarity) 
-      ).toFixed(2)
+      ).toFixed(2),
+    sortingField: "similarity"
   },
   {
     id: "relevance",
@@ -164,7 +171,8 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
     cell: (item) =>
     (
       parseFloat(item.relevance) 
-    ).toFixed(2)
+    ).toFixed(2),
+    sortingField: "relevance"
   },
   {
     id: "correctness",
@@ -172,7 +180,8 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
     cell: (item) =>
     (
       parseFloat(item.correctness) 
-    ).toFixed(2)
+    ).toFixed(2),
+    sortingField: "correctness"
   },
 ];
 

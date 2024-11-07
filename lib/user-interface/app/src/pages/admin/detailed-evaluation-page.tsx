@@ -19,11 +19,20 @@ import { getColumnDefinition } from "./columns";
 import { useNotifications } from "../../components/notif-manager";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { AdminDataType } from "../../common/types";
+import { NonCancelableCustomEvent } from "@cloudscape-design/components";
+import { TableProps } from "@cloudscape-design/components";
+
+
 
 export interface DetailedEvalProps {
     documentType: AdminDataType;
   }
 
+  const findFirstSortableColumn = (columns) => {
+    return columns.find(col => col.sortingField) || columns[0];
+  };
+
+  
 function DetailedEvaluationPage(props: DetailedEvalProps) {
   const { evaluationId } = useParams();
   const navigate = useNavigate();
@@ -88,11 +97,54 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
   const breadcrumbItems = [
     { text: "LLM Evaluation", href: "/admin/llm-evaluation" },
     // text should be Evaluation {evaluation name}
-    { text: `Evaluation ${evaluationName}`, href: "#" },
-    // { text: `Evaluation ${evaluationId}`, href: "#" },
+    // { text: `Evaluation ${evaluationName}`, href: "#" },
+    { text: `Evaluation ${evaluationId}`, href: "#" },
   ];
 
   const columnDefinitions = getColumnDefinition(props.documentType);
+  const defaultSortingColumn = findFirstSortableColumn(columnDefinitions);
+  const currentPageItems = pages[Math.min(pages.length - 1, currentPageIndex - 1)]?.Items || [];
+
+  const { items, collectionProps, filterProps, paginationProps } = useCollection(
+    currentPageItems,
+    {
+      sorting: {
+        defaultState: {
+          sortingColumn: defaultSortingColumn,
+          isDescending: false,
+        },
+      },
+      filtering: {},
+    }
+  );
+
+  const handleDownload = () => {
+    // Convert your table data to CSV
+    const csvContent = convertToCSV(items);
+    
+    // Create a Blob with the CSV data
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // Create a download link and trigger the download
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "table_data.csv");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+  
+  // Helper function to convert data to CSV
+  const convertToCSV = (data) => {
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(item => Object.values(item).join(','));
+    return [headers, ...rows].join('\n');
+  };
+
 
   return (
     <BaseAppLayout
@@ -112,9 +164,14 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
           <Table
             loading={loading}
             loadingText="Loading evaluation details"
-            items={pages[Math.min(pages.length - 1, currentPageIndex - 1)]?.Items || []}
+            items={items}
             columnDefinitions={columnDefinitions}
             trackBy="question_id"
+            sortingColumn={collectionProps.sortingColumn || defaultSortingColumn}
+            sortingDescending={collectionProps.sortingDescending}
+            onSortingChange={(event) => {
+            collectionProps.onSortingChange(event);
+            }}
             empty={
               <Box textAlign="center">
                 <StatusIndicator type="warning">
@@ -122,7 +179,16 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
                 </StatusIndicator>
               </Box>
             }
-            header={<Header>Detailed Results</Header>}
+            header={
+              <Header
+                variant="h2"
+                actions={
+                  <Button onClick={handleDownload}>Download Table</Button>
+                }
+              >
+                Detailed Results
+              </Header>
+            }
             pagination={
               pages.length === 0 ? null : (
                 <Pagination

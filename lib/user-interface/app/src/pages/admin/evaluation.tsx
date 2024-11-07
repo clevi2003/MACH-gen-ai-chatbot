@@ -118,7 +118,7 @@ import {
                     variant="h3"
                     // description="Container description"
                   >
-                    Last successful sync: {lastSyncTime}
+                    Last sync
                   </Header>                
                 }
               >

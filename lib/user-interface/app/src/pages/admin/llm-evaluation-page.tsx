@@ -120,12 +120,12 @@ import {
                     variant="h3"
                     // description="Container description"
                   >
-                    Last successful sync: {lastSyncTime}
+                    Giving Insight Into The Performance of Our AI System
                   </Header>                
                 }
               >
                 <SpaceBetween size="xxs">
-                View past evaluations and run new evaluations for the llm's RAG performance.
+                Look at evaluation trends, performance on individual test cases, or create new evaluation instances with dynamic sets of test cases.
   
                 <br></br>
         

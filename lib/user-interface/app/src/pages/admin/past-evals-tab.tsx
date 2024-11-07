@@ -17,6 +17,11 @@ import { getColumnDefinition } from "./columns";
 import { useNavigate } from "react-router-dom";
 import { AdminDataType } from "../../common/types";
 
+const findFirstSortableColumn = (columns) => {
+  return columns.find(col => col.sortingField && !col.disableSort) || columns[0];
+};
+
+
 export interface PastEvalsTabProps {
   tabChangeFunction: () => void;
   documentType: AdminDataType;
@@ -32,18 +37,21 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
   const [pages, setPages] = useState([]);
   const needsRefresh = useRef(false);
 
+  const columnDefinitions = getColumnDefinition(props.documentType);
+  const defaultSortingColumn = findFirstSortableColumn(columnDefinitions);
+  const currentPageItems = pages[Math.min(pages.length - 1, currentPageIndex - 1)]?.Items || [];
 
-  const { items, collectionProps, paginationProps } = useCollection(evaluations, {
-    pagination: { pageSize: 10 },
-    sorting: {
-      defaultState: {
-        sortingColumn: {
-          sortingField: "timestamp",
+  const { items, collectionProps, paginationProps } = useCollection(
+    currentPageItems,
+    {
+      sorting: {
+        defaultState: {
+          sortingColumn: defaultSortingColumn,
+          isDescending: false,
         },
-        isDescending: true,
       },
-    },
-  });
+    }
+  );
 
   /** Function to get evaluations from api*/
   const getEvaluations = useCallback(
@@ -91,12 +99,12 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
       setCurrentPageIndex((current) => Math.min(pages.length + 1, current + 1));
     }
   };
+
   
   const onPreviousPageClick = () => {
     setCurrentPageIndex((current) => Math.max(1, current - 1));
   };
 
-  const columnDefinitions = getColumnDefinition(props.documentType);
 
   return (
     <Table
@@ -104,8 +112,13 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
       loading={loading}
       loadingText={"Loading evaluations"}
       columnDefinitions={columnDefinitions}
-      items={pages[Math.min(pages.length - 1, currentPageIndex - 1)]?.Items || []}
+      items={items}
       trackBy="evaluation_id"
+      sortingColumn={collectionProps.sortingColumn || defaultSortingColumn}
+      sortingDescending={collectionProps.sortingDescending}
+      onSortingChange={(event) => {
+      collectionProps.onSortingChange(event);
+      }}
       header={
         <Header
           actions={
