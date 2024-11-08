@@ -31,8 +31,12 @@ def lambda_handler(event, context):
 
         # Get the test cases file URI from the event
         test_cases_key = event.get('testCasesKey')
+        print("test_cases_key: ", test_cases_key)
         if not test_cases_key:
             raise ValueError("testCasesKey parameter is required in the event.")
+        eval_name = event.get('evaluation_name')
+        if not eval_name:
+            raise ValueError("evaluation_name parameter is required in the event.")
 
         # Parse S3 bucket and key from the URI
         # bucket_name, key = parse_s3_uri(test_cases_uri)   
@@ -93,7 +97,7 @@ def lambda_handler(event, context):
             'operation': 'add_evaluation',
             "test_cases_key": test_cases_key,
             'evaluation_id': evaluation_id,
-            'evaluation_name': evaluation_name,
+            'evaluation_name': eval_name,
             'average_similarity': average_similarity,
             'average_relevance': average_relevance,
             'average_correctness': average_correctness,
@@ -186,6 +190,7 @@ def evaluate_with_ragas(question, expected_response, actual_response):
         from datasets import Dataset
         from ragas import evaluate
         from ragas.metrics import answer_correctness, answer_similarity, answer_relevancy
+        print("ragas imports done")
         # Metrics to evaluate
         metrics = [answer_correctness, answer_similarity, answer_relevancy] 
 

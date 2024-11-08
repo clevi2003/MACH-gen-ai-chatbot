@@ -180,6 +180,9 @@ export default function NewEvalTab(props: FileUploadTabProps) {
       console.error(Utils.getErrorMessage(error));
       addNotification("error", "Error starting new evaluation. Please try again.");
     }
+    finally {
+      addNotification("success", "Call sent!");
+    }
   };
 
   return (

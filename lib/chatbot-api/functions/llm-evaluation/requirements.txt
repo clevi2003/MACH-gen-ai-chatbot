@@ -4,3 +4,4 @@ datasets
 pandas
 nltk
 langchain_community
+llama_index 

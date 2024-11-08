@@ -63,13 +63,15 @@ export class EvaluationsClient {
   }
   async startNewEvaluation(evaluationName: string, testCaseFile: String) {
     const auth = await Utils.authenticate();
+    console.log("\n\n\n\n\n\n\n\n" + testCaseFile + "\n\n\n\n\n\n\n\n");
     const body: any = {
-      operation: "start_new_evaluation",
+      // operation: "start_new_evaluation",
       evaluation_name: evaluationName,
-      test_case_file: testCaseFile,
+      testCasesKey: testCaseFile,
     };
+    console.log("body in the api", body);
 
-    const response = await fetch(`${this.API}/eval-results-handler`, {
+    const response = await fetch(`${this.API}/eval-run-handler`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
