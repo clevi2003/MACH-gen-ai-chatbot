@@ -61,4 +61,27 @@ export class EvaluationsClient {
     const result = await response.json();
     return result;
   }
+  async startNewEvaluation(evaluationName: string, testCaseFile: String) {
+    const auth = await Utils.authenticate();
+    const body: any = {
+      operation: "start_new_evaluation",
+      evaluation_name: evaluationName,
+      test_case_file: testCaseFile,
+    };
+
+    const response = await fetch(`${this.API}/eval-results-handler`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: auth,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to start new evaluation");
+    }
+
+    const result = await response.json();
+    return result;
+  }
 }

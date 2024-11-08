@@ -19,6 +19,7 @@ import { ApiClient } from "../../common/api-client/api-client";
 import { Utils } from "../../common/utils";
 import { FileUploader } from "../../common/file-uploader";
 import { useNavigate } from "react-router-dom";
+import { useNotifications } from "../../components/notif-manager";
 
 const fileExtensions = new Set([".csv", ".xlsx"]);
 
@@ -65,6 +66,7 @@ export default function NewEvalTab(props: FileUploadTabProps) {
   const [currentFileName, setCurrentFileName] = useState<string>("");
   const [uploadPanelDismissed, setUploadPanelDismissed] =
     useState<boolean>(false);
+  const { addNotification } = useNotifications();
 
   const [evalName, setEvalName] = useState<string>("SampleEvalName");
 
@@ -167,7 +169,17 @@ export default function NewEvalTab(props: FileUploadTabProps) {
   };
 
   const onNewEvaluation = () => {
-    navigate("/admin/evaluations/new");
+    if (evalName === "SampleEvalName" || evalName.trim() === "") {
+      setGlobalError("Please enter a name for the evaluation");
+      return;
+    }
+    try {
+      const response = apiClient.evaluations.startNewEvaluation(evalName, "test_cases.csv");
+    }
+    catch (error) {
+      console.error(Utils.getErrorMessage(error));
+      addNotification("error", "Error starting new evaluation. Please try again.");
+    }
   };
 
   return (
