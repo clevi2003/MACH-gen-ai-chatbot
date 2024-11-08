@@ -169,21 +169,21 @@ useEffect(() => {
               <Container header={<Header variant="h3">Accuracy</Header>}>
                 <ProgressBar
                   value={acc_score}
-                  description="Correctness of different facts within a given answer"
+                  description="Answer Correctness breaks down answers into different factual statements and looks at the overlap of statements in the expected answer given in a test case and the generated answer from the LLM"
                   resultText={`${acc_score}%`}
                 />
               </Container>
               <Container header={<Header variant="h3">Relevancy</Header>}>
                 <ProgressBar
                   value={rel_score}
-                  description="Is the generated answer relevant for the question that was asked"
+                  description="Answer Relevancy looks at the generated answer and uses an LLM to guess what questions it may be answering. The better the LLM guesses the original question, the more relevant the generated answer is"
                   resultText={`${rel_score}%`}
                 />
               </Container>
               <Container header={<Header variant="h3">Similarity</Header>}>
                 <ProgressBar
                   value={sim_score}
-                  description="How semantically similar is the generated answer to the expected output"
+                  description="Answer Similarity looks only at the semantic similarity of the expected answer and the LLM generated answer by finding the cosine similarity between the two answers and converting it into a score"
                   resultText={`${sim_score}%`}
                 />
               </Container>

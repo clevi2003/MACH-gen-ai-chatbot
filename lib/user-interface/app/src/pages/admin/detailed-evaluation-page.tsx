@@ -98,7 +98,7 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
     { text: "LLM Evaluation", href: "/admin/llm-evaluation" },
     // text should be Evaluation {evaluation name}
     // { text: `Evaluation ${evaluationName}`, href: "#" },
-    { text: `Evaluation ${evaluationId}`, href: "#" },
+    { text: `Evaluation ${evaluationDetails}`, href: "#" },
   ];
 
   const columnDefinitions = getColumnDefinition(props.documentType);
@@ -122,8 +122,12 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
     // Convert your table data to CSV
     const csvContent = convertToCSV(items);
     
+    // Add Byte Order Mark for UTF-8
+    const BOM = '\uFEFF';
+    const csvContentWithBOM = BOM + csvContent;
+    
     // Create a Blob with the CSV data
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContentWithBOM], { type: 'text/csv;charset=utf-8;' });
     
     // Create a download link and trigger the download
     const link = document.createElement("a");
@@ -138,12 +142,23 @@ function DetailedEvaluationPage(props: DetailedEvalProps) {
     }
   };
   
-  // Helper function to convert data to CSV
-  const convertToCSV = (data) => {
-    const headers = Object.keys(data[0]).join(',');
-    const rows = data.map(item => Object.values(item).join(','));
+  
+  
+  const convertToCSV = (data: readonly unknown[]): string => {
+    if (data.length === 0) {
+      return '';
+    }
+  
+    const headers = Object.keys(data[0] as object).join(',');
+    const rows = data.map(item => 
+      Object.values(item as object).map(value => 
+        typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : String(value)
+      ).join(',')
+    );
     return [headers, ...rows].join('\n');
   };
+  
+  
 
 
   return (

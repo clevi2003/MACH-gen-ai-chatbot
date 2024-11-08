@@ -23,7 +23,7 @@ import {
   export default function LlmEvaluationPage() {
     const onFollow = useOnFollow();
     const [admin, setAdmin] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState("file");
+    const [activeTab, setActiveTab] = useState("current-eval");
     const appContext = useContext(AppContext);
     const apiClient = new ApiClient(appContext);
     const [lastSyncTime, setLastSyncTime] = useState("")
