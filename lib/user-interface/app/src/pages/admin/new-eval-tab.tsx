@@ -175,7 +175,7 @@ export default function NewEvalTab(props: FileUploadTabProps) {
     }
     try {
       const response = apiClient.evaluations.startNewEvaluation(evalName, "test_cases.csv");
-    }
+    } 
     catch (error) {
       console.error(Utils.getErrorMessage(error));
       addNotification("error", "Error starting new evaluation. Please try again.");

@@ -8,6 +8,7 @@ from decimal import Decimal
 # Retrieve DynamoDB table names from environment variables
 EVALUATION_SUMMARIES_TABLE = os.environ["EVAL_SUMMARIES_TABLE"]
 EVALUATION_RESULTS_TABLE = os.environ["EVAL_RESULTS_TABLE"]
+TEST_CASES_BUCKET = os.environ["TEST_CASES_BUCKET"]
 
 # Initialize a DynamoDB resource using boto3
 dynamodb = boto3.resource("dynamodb", region_name='us-east-1')
@@ -70,7 +71,10 @@ def add_evaluation(evaluation_id, evaluation_name, average_similarity,
         return {
             'statusCode': 200,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'message': 'Evaluation added successfully'})
+            'body': json.dumps({
+                'message': 'Evaluation added successfully',
+                'evaluation_id': evaluation_id
+                })
         }
     except ClientError as error:
         print("Caught error: DynamoDB error - could not add evaluation")
@@ -80,6 +84,12 @@ def add_evaluation(evaluation_id, evaluation_name, average_similarity,
             'body': json.dumps(str(error))
         }
     
+def read_detailed_results_from_s3(detailed_results_s3_key):
+    s3_client = boto3.client('s3')
+    response = s3_client.get_object(Bucket=TEST_CASES_BUCKET, Key=detailed_results_s3_key)
+    content = response['Body'].read().decode('utf-8')
+    return json.loads(content)
+    
 def lambda_handler(event, context):
     data = json.loads(event['body']) if 'body' in event else event
     evaluation_id = data.get('evaluation_id')
@@ -87,16 +97,19 @@ def lambda_handler(event, context):
     average_similarity = data.get('average_similarity')
     average_relevance = data.get('average_relevance')
     average_correctness = data.get('average_correctness')
-    detailed_results = data.get('detailed_results', [])
-    total_questions = data.get('total_questions', len(detailed_results))
+    # detailed_results = data.get('detailed_results', [])
+    detailed_results_s3_key = data.get('detailed_results_s3_key')
+    total_questions = data.get('total_questions')
     test_cases_key = data.get('test_cases_key')
 
-    if not all([average_similarity, average_relevance, average_correctness, total_questions, detailed_results, test_cases_key]):
+    if not all([average_similarity, average_relevance, average_correctness, total_questions, detailed_results_s3_key, test_cases_key]):
         return {
             'statusCode': 400,
             'headers': {'Access-Control-Allow-Origin': '*'},
             'body': json.dumps('Missing required parameters for adding evaluation.')
         }
+    
+    detailed_results = read_detailed_results_from_s3(detailed_results_s3_key)
     return add_evaluation(
         evaluation_id,
         evaluation_name,

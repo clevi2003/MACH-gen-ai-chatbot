@@ -19,7 +19,6 @@ from langchain_aws import BedrockEmbeddings
 
 GENERATE_RESPONSE_LAMBDA_NAME = os.environ['GENERATE_RESPONSE_LAMBDA_NAME']
 BEDROCK_MODEL_ID = os.environ['BEDROCK_MODEL_ID']
-TEST_CASES_BUCKET = os.environ['TEST_CASES_BUCKET']
 
 # Initialize clients outside the loop
 s3_client = boto3.client('s3')
@@ -28,22 +27,22 @@ lambda_client = boto3.client('lambda')
 def lambda_handler(event, context): 
     print("in the handler function")
     try:  
-        chunk_key = event["chunk_key"]
-        evaluation_id = event["evaluation_id"]
-        print("Processing chunk:", chunk_key)
-        test_cases = read_chunk_from_s3(s3_client, TEST_CASES_BUCKET, chunk_key)
+        print("event: ", event)
+        # pull test cases chunk from event
+        # test_cases = event["test_cases_chunk"]
+        print("test_cases: ", event)
 
         # Arrays to collect results
         detailed_results = []
         total_similarity = 0
         total_relevance = 0
         total_correctness = 0
-        #num_test_cases = len(test_cases)
-        # num_test_cases = len(event)
+        # num_test_cases = len(test_cases)
+        num_test_cases = len(event)
 
 
         # Process each test case
-        for test_case in test_cases:
+        for test_case in event:
             print("test_case: ", test_case)
             question = test_case['question']
             expected_response = test_case['expectedResponse']
@@ -61,7 +60,7 @@ def lambda_handler(event, context):
                 similarity = response['scores']['similarity']
                 relevance = response['scores']['relevance']
                 correctness = response['scores']['correctness']
-
+            
             # Collect results
             detailed_results.append({
                 'question': question,
@@ -81,20 +80,12 @@ def lambda_handler(event, context):
             "total_similarity": total_similarity,
             "total_relevance": total_relevance,
             "total_correctness": total_correctness, 
-            "num_test_cases": len(detailed_results),
+            "num_test_cases": num_test_cases,
         }
-        # Write partial_results to S3
-        partial_result_key = f"evaluations/{evaluation_id}/partial_results/{os.path.basename(chunk_key)}"
-        s3_client.put_object(
-            Bucket=TEST_CASES_BUCKET,
-            Key=partial_result_key,
-            Body=json.dumps(partial_results)
-        )
-
-        # Return only the S3 key
-        return {
-            "partial_result_key": partial_result_key
-        }
+        # return {
+        #     "partial_results": partial_results,
+        # }
+        return partial_results
         
     except Exception as e:
         logging.error(f"Error in evaluation Lambda: {str(e)}")
@@ -176,17 +167,8 @@ def evaluate_with_ragas(question, expected_response, actual_response):
         # Evaluate
         result = evaluate(data_samples, metrics=metrics, llm=bedrock_model, embeddings=bedrock_embeddings)
         scores = result.to_pandas().iloc[0]
-
-        # if any score is nan, return error
-        if scores.isnull().values.any():
-            raise ValueError("RAGAS evaluation returned NaN scores")
         
         return {"status": "success", "scores": {"similarity": scores['semantic_similarity'], "relevance": scores['answer_relevancy'], "correctness": scores['answer_correctness']}}
     except Exception as e:
         logging.error(f"Error in RAGAS evaluation: {str(e)}")
         return {"status": "error", "error": str(e)}
-    
-def read_chunk_from_s3(s3_client, bucket_name, key):
-    response = s3_client.get_object(Bucket=bucket_name, Key=key)
-    content = response['Body'].read().decode('utf-8')
-    return json.loads(content)

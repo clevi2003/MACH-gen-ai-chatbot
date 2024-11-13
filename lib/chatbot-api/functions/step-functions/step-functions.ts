@@ -27,6 +27,7 @@ export class StepFunctionsStack extends Construct {
     public readonly generateResponseFunction: lambda.Function;
     public readonly llmEvalFunction: lambda.Function;
     public readonly aggregateEvalResultsFunction: lambda.Function;
+    public readonly llmEvalCleanupFunction: lambda.Function;
     public readonly llmEvalStateMachine: StateMachine;
 
     constructor(scope: Construct, id: string, props: StepFunctionsStackProps) {
@@ -45,9 +46,14 @@ export class StepFunctionsStack extends Construct {
             effect: iam.Effect.ALLOW,
             actions: [
                 's3:GetObject',
-                's3:ListBucket'
+                's3:ListBucket',
+                's3:PutObject'
             ],
-            resources: [props.evalTestCasesBucket.bucketArn, props.evalTestCasesBucket.bucketArn + "/*"]
+            resources: [
+                props.evalTestCasesBucket.bucketArn, 
+                props.evalTestCasesBucket.bucketArn + "/*", 
+                props.evalTestCasesBucket.arnForObjects('*'),
+            ]
         }));
         this.splitEvalTestCasesFunction = splitEvalTestCasesFunction;
 
@@ -57,7 +63,8 @@ export class StepFunctionsStack extends Construct {
             handler: 'lambda_function.lambda_handler', 
             environment: {
                 "EVAL_SUMMARIES_TABLE" : props.evalSummariesTable.tableName,
-                "EVAL_RESULTS_TABLE" : props.evalResutlsTable.tableName
+                "EVAL_RESULTS_TABLE" : props.evalResutlsTable.tableName,
+                "TEST_CASES_BUCKET" : props.evalTestCasesBucket.bucketName,
             },
             timeout: cdk.Duration.seconds(30)
         });
@@ -72,6 +79,18 @@ export class StepFunctionsStack extends Construct {
                 'dynamodb:Scan'
             ],
             resources: [props.evalResutlsTable.tableArn, props.evalResutlsTable.tableArn + "/index/*", props.evalSummariesTable.tableArn, props.evalSummariesTable.tableArn + "/index/*"]
+        }));
+        llmEvalResultsHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [
+                's3:GetObject',
+                's3:PutObject',
+            ],
+            resources: [
+                props.evalTestCasesBucket.bucketArn, 
+                props.evalTestCasesBucket.bucketArn + "/*", 
+                props.evalTestCasesBucket.arnForObjects('*'),
+            ]
         }));
         props.evalResutlsTable.grantReadWriteData(llmEvalResultsHandlerFunction);
         props.evalSummariesTable.grantReadWriteData(llmEvalResultsHandlerFunction);
@@ -113,6 +132,7 @@ export class StepFunctionsStack extends Construct {
             environment: {
                 "GENERATE_RESPONSE_LAMBDA_NAME" : generateResponseFunction.functionName,
                 "BEDROCK_MODEL_ID" : "anthropic.claude-3-haiku-20240307-v1:0",
+                "TEST_CASES_BUCKET" : props.evalTestCasesBucket.bucketName
             },
             timeout: cdk.Duration.minutes(15),
             memorySize: 10240
@@ -135,6 +155,18 @@ export class StepFunctionsStack extends Construct {
             ],
             resources: ['*']
         }));
+        llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [
+                's3:GetObject',
+                's3:PutObject',
+            ],
+            resources: [
+                props.evalTestCasesBucket.bucketArn, 
+                props.evalTestCasesBucket.bucketArn + "/*", 
+                props.evalTestCasesBucket.arnForObjects('*'),
+            ]
+        }));
         generateResponseFunction.grantInvoke(llmEvalFunction);
         this.llmEvalFunction = llmEvalFunction;
 
@@ -142,31 +174,99 @@ export class StepFunctionsStack extends Construct {
             runtime: lambda.Runtime.PYTHON_3_12,
             code: lambda.Code.fromAsset(path.join(__dirname, 'llm-evaluation/aggregate-eval-results')), 
             handler: 'lambda_function.lambda_handler', 
+            environment: {
+                "TEST_CASES_BUCKET" : props.evalTestCasesBucket.bucketName,
+            },
             timeout: cdk.Duration.seconds(30)
         });
+        aggregateEvalResultsFunction.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [
+                's3:GetObject',
+                's3:PutObject',
+            ],
+            resources: [
+                props.evalTestCasesBucket.bucketArn, 
+                props.evalTestCasesBucket.bucketArn + "/*", 
+                props.evalTestCasesBucket.arnForObjects('*'),
+            ]
+        }));
         this.aggregateEvalResultsFunction = aggregateEvalResultsFunction;
+
+        const llmEvalCleanupFunction = new lambda.Function(this, 'LlmEvalCleanupFunction', {
+            runtime: lambda.Runtime.PYTHON_3_12,
+            code: lambda.Code.fromAsset(path.join(__dirname, 'llm-evaluation/cleanup')), 
+            handler: 'lambda_function.lambda_handler', 
+            environment: {
+                "TEST_CASES_BUCKET" : props.evalTestCasesBucket.bucketName
+            },
+            timeout: cdk.Duration.seconds(30)
+        });
+        llmEvalCleanupFunction.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [
+                's3:ListBucket',
+                's3:DeleteObject',
+                's3:DeleteObjects'
+            ],
+            resources: [
+                props.evalTestCasesBucket.bucketArn, 
+                props.evalTestCasesBucket.bucketArn + "/*", 
+                props.evalTestCasesBucket.arnForObjects('*'),
+            ]
+        }));
+        this.llmEvalCleanupFunction = llmEvalCleanupFunction;
 
         const splitTestCasesTask = new tasks.LambdaInvoke(this, 'Split Test Cases', {
             lambdaFunction: this.splitEvalTestCasesFunction,
             outputPath: '$.Payload',
           });
       
+        // const evaluateTestCasesTask = new tasks.LambdaInvoke(this, 'Evaluate Test Cases', {
+        // lambdaFunction: this.llmEvalFunction,
+        // outputPath: '$.Payload',
+        // });
+
+        // const evaluateTestCasesTask = new tasks.LambdaInvoke(this, 'Evaluate Test Cases', {
+        //     lambdaFunction: this.llmEvalFunction,
+        //     payload: stepfunctions.TaskInput.fromObject({
+        //         'chunk_key.$': '$',
+        //     }),
+        //     outputPath: '$.Payload',
+        // });
+
         const evaluateTestCasesTask = new tasks.LambdaInvoke(this, 'Evaluate Test Cases', {
-        lambdaFunction: this.llmEvalFunction,
-        outputPath: '$.Payload',
+            lambdaFunction: this.llmEvalFunction,
+            // payload: stepfunctions.TaskInput.fromObject({
+            //     'chunk_key.$': '$',
+            //     'evaluation_id.$': '$.evaluation_id',
+            // }),
+            outputPath: '$.Payload',
         });
       
+        // const processTestCasesMap = new stepfunctions.Map(this, 'Process Test Cases', {
+        // itemsPath: '$.chunks',
+        // maxConcurrency: 5,
+        // resultPath: '$.ProcessedResults'
+        // });
+        // processTestCasesMap.itemProcessor(evaluateTestCasesTask);
+
         const processTestCasesMap = new stepfunctions.Map(this, 'Process Test Cases', {
-        itemsPath: '$.chunks',
-        maxConcurrency: 5,
-        resultPath: '$.ProcessedResults'
+            itemsPath: '$.chunk_keys',
+            maxConcurrency: 5,
+            resultPath: '$.partial_result_keys',
+            itemSelector: {
+                'chunk_key.$': '$$.Map.Item.Value.chunk_key',
+                'evaluation_id.$': '$$.Map.Item.Value.evaluation_id',
+            },
         });
         processTestCasesMap.itemProcessor(evaluateTestCasesTask);
     
         const aggregateResultsTask = new tasks.LambdaInvoke(this, 'Aggregate Results', {
         lambdaFunction: this.aggregateEvalResultsFunction,
         payload: stepfunctions.TaskInput.fromObject({
-            'partial_results_list.$': '$.ProcessedResults',
+            //'partial_results_list.$': '$.ProcessedResults',
+            'partial_result_keys.$': '$.partial_result_keys',
             'evaluation_id.$': '$.evaluation_id',
             'evaluation_name.$': '$.evaluation_name',
             'test_cases_key.$': '$.test_cases_key',
@@ -183,16 +283,26 @@ export class StepFunctionsStack extends Construct {
             'average_relevance.$': '$.average_relevance',
             'average_correctness.$': '$.average_correctness',
             'total_questions.$': '$.total_questions',
-            'detailed_results.$': '$.detailed_results',
+            'detailed_results_s3_key.$': '$.detailed_results_s3_key',
+            // 'detailed_results.$': '$.detailed_results',
             'test_cases_key.$': '$.test_cases_key',
         }),
         outputPath: '$.Payload',
+        });
+
+        const cleanupChunksTask = new tasks.LambdaInvoke(this, 'Cleanup Chunks', {
+            lambdaFunction: this.llmEvalCleanupFunction,
+            payload: stepfunctions.TaskInput.fromObject({
+                'body.$': '$.body',
+            }),
+            outputPath: '$.Payload',
         });
       
         const definition = splitTestCasesTask
         .next(processTestCasesMap)
         .next(aggregateResultsTask)
-        .next(saveResultsTask);
+        .next(saveResultsTask)
+        .next(cleanupChunksTask);
 
         const llmEvalStateMachine = new stepfunctions.StateMachine(this, 'EvaluationStateMachine', {
             definitionBody: stepfunctions.DefinitionBody.fromChainable(definition),
