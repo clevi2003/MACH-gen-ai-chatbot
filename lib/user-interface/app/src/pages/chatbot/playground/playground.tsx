@@ -36,10 +36,8 @@ export default function Playground() {
       }
       toolsWidth={300}       
       content={
-       <div>
-      {/* <Chat sessionId={sessionId} /> */}
-      
-      <Chat sessionId={sessionId} />
+       <div>      
+        <Chat sessionId={sessionId} />
       </div>
      }
     />    

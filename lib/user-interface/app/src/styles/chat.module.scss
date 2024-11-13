@@ -49,11 +49,139 @@
   }
 }
 
+// .welcome_text {
+//   color: awsui.$color-text-body-default;
+//   font-size: 3rem;
+//   font-weight: bolder;
+//   opacity: 0.4;
+// }
+
 .welcome_text {
-  color: awsui.$color-text-body-default;
-  font-size: 3rem;
-  font-weight: bolder;
+  color: gray;
+  font-size: 2rem; /* Adjusted font size */
+  font-weight: 700;
   opacity: 0.4;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.chat_message_container {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.chat_message {
+  max-width: 60%;
+  padding: 15px;
+  border-radius: 10px;
+  font-size: 1rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.welcome_container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.welcome_main_bubble {
+  background: white;
+  color: #656871;
+  padding: 20px;
+  border-radius: 20px;
+  text-align: center;
+  font-size: 1.1rem; /* Larger font size */
+  max-width: 80%;
+  margin-bottom: 28px auto;
+  cursor: default;
+  font-family: 'Open Sans', sans-serif;
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 15px; /* Matches the border radius of the bubble */
+    background: linear-gradient(
+      rgba(200, 200, 200, 0.3), /* Light gray with transparency */
+      rgba(255, 255, 255, 0)
+    );
+    z-index: -1; /* Ensures the gradient shadow stays behind the bubble */
+  }
+
+  /* Shadow effect from all sides */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Light shadow for additional separation */
+}
+
+.welcome_topics_container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 80%;
+}
+
+.welcome_topic_bubble {
+  background: white;
+  color: #656871;
+  padding: 15px;
+  border-radius: 15px;
+  margin: 5px;
+  // font-size: 1.2rem; 
+  flex: 1 1 calc(50% - 20px); /* Adjusts the bubbles to be responsive */
+  box-sizing: border-box;
+  text-align: center;
+  cursor: default;
+  font-family: 'Open Sans', sans-serif;
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 15px; /* Matches the border radius of the bubble */
+    background: linear-gradient(
+      rgba(200, 200, 200, 0.3), /* Light gray with transparency */
+      rgba(255, 255, 255, 0)
+    );
+    z-index: -1; /* Ensures the gradient shadow stays behind the bubble */
+  }
+
+  /* Shadow effect from all sides */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Light shadow for additional separation */
+}
+
+@media (min-width: 600px) {
+  .welcome_topic_bubble {
+    flex: 1 1 calc(33% - 20px); /* Three columns on larger screens */
+  }
+}
+
+.message_content {
+  white-space: pre-wrap; /* Preserve line breaks */
+}
+
+.chatbot_message {
+  background-color: lightgray; /* Adjust as needed */
+  color: awsui.$color-text-body-default;
+  align-self: flex-start;
+}
+
+.message_content {
+  white-space: pre-wrap; /* Preserve line breaks */
+}
+
+.welcome_message {
+  font-size: 1.2rem; /* Larger font size for welcome message */
+  background-color: #d1e7dd; /* Light green background */
+  color: #0f5132; /* Dark green text color */
 }
 
 .input_container {
@@ -118,7 +246,7 @@
   }
 }
 
-.btn_chabot_message_copy {
+.btn_chabot_message_copy { 
   float: right;
 }
 
