@@ -12,7 +12,7 @@ import { ApiClient } from "../../common/api-client/api-client";
 import ChatMessage from "./chat-message";
 import ChatInputPanel, { ChatScrollState } from "./chat-input-panel";
 import styles from "../../styles/chat.module.scss";
-import { CHATBOT_NAME } from "../../common/constants";
+import { WELCOME_TOPICS, WELCOME_MESSAGE } from "../../common/constants";
 import { useNotifications } from "../notif-manager";
 
 export default function Chat(props: { sessionId?: string}) {
@@ -136,9 +136,27 @@ export default function Chat(props: { sessionId?: string}) {
           />
         ))}
       </SpaceBetween>
-      <div className={styles.welcome_text}>
-        {messageHistory.length == 0 && !session?.loading && (
-          <center>{CHATBOT_NAME}</center>
+      <div> 
+        {messageHistory.length == 0 && !session?.loading && (          
+        <>
+        {/* Render the welcome content */}
+        <div className={styles.welcome_container}>
+          {/* Main bubble */}
+          <div className={styles.welcome_topics_container}>
+            <div className={styles.welcome_main_bubble}> 
+              {WELCOME_MESSAGE}
+            </div>
+          </div>
+          {/* Lower topic bubbles */}
+          <div className={styles.welcome_topics_container}>
+            {WELCOME_TOPICS.map((topic, index) => (
+              <div key={index} className={styles.welcome_topic_bubble}>
+                {topic}
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
         )}
         {session?.loading && (
           <center>

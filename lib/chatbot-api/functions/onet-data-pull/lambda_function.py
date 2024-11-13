@@ -66,7 +66,7 @@ def lambda_handler(event, context):
                 career_str = career.find('title').text
                 tags = career.find('tags').attrib
                 outlook = tags['bright_outlook']
-                if outlook:
+                if outlook: 
                     outlook = "have a bright outlook."
                 else:
                     outlook = "do not have a bright outlook."
@@ -75,7 +75,8 @@ def lambda_handler(event, context):
                 if detailed_data['status_code'] != 200:
                     return detailed_data
                 career_str += ", also known as " + ", ".join(detailed_data['also_called']) + ", " + outlook
-                career_str += " People in this career do the following: " + ";".join(detailed_data['what_they_do'])
+                # career_str += " People in this career do the following: " + ";".join(detailed_data['what_they_do'])
+                career_str += " People in this career do the following: " + detailed_data['what_they_do']
                 career_str += " People in this career typically perform the following on the job tasks: " + ";".join(detailed_data['on_the_job_tasks'])
 
                 all_careers += career_str + "\n"
