@@ -8,7 +8,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as bedrock from "aws-cdk-lib/aws-bedrock";
-import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
+import { StepFunctionsStack } from './step-functions/step-functions';
 
 interface LambdaFunctionStackProps {  
   readonly wsApiEndpoint : string;  
@@ -32,9 +32,10 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly getS3Function : lambda.Function;
   public readonly uploadS3Function : lambda.Function;
   public readonly syncKBFunction : lambda.Function;
-  public readonly generateResponseFunction : lambda.Function;
-  public readonly llmEvalFunction : lambda.Function;
+  //public readonly generateResponseFunction : lambda.Function;
+  //public readonly llmEvalFunction : lambda.Function;
   public readonly handleEvalResultsFunction : lambda.Function;
+  public readonly stepFunctionsStack : StepFunctionsStack;
 
   constructor(scope: Construct, id: string, props: LambdaFunctionStackProps) {
     super(scope, id);    
@@ -216,34 +217,6 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.uploadS3Function = uploadS3APIHandlerFunction;
 
-    const generateResponseFunction = new lambda.Function(scope, 'GenerateResponseFunction', {
-      runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
-          code: lambda.Code.fromAsset(path.join(__dirname, 'generate-response')), // Points to the lambda directory
-          handler: 'index.handler', // Points to the 'hello' file in the lambda directory
-          environment : {
-            "PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
-            You have access to a search tool that you will use to look up answers to questions.`,
-            'KB_ID' : props.knowledgeBase.attrKnowledgeBaseId
-          },
-          timeout: cdk.Duration.seconds(300)
-        });
-    generateResponseFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'bedrock:InvokeModelWithResponseStream',
-        'bedrock:InvokeModel',
-        
-      ],
-      resources: ["*"]
-    }));
-    generateResponseFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'bedrock:Retrieve'
-      ],
-      resources: [props.knowledgeBase.attrKnowledgeBaseArn]
-    }));
-    this.generateResponseFunction = generateResponseFunction;
 
     const evalResultsAPIHandlerFunction = new lambda.Function(scope, 'EvalResultsHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
@@ -270,57 +243,12 @@ export class LambdaFunctionStack extends cdk.Stack {
     props.evalResutlsTable.grantReadWriteData(evalResultsAPIHandlerFunction);
     props.evalSummariesTable.grantReadWriteData(evalResultsAPIHandlerFunction);
 
-    const llmEvalFunction = new lambda.DockerImageFunction(scope, 'llmEvaluationFunction', {
-      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, 'llm-evaluation'), {
-        platform: Platform.LINUX_AMD64, // Specify the correct platform
-      }),
-      environment: {
-        "RESULTS_TABLE" : props.evalResutlsTable.tableName, 
-        "TEST_CASES_BUCKET" : props.evalTestCasesBucket.bucketName, 
-        "GENERATE_RESPONSE_LAMBDA_NAME" : generateResponseFunction.functionName,
-        "BEDROCK_MODEL_ID" : "anthropic.claude-3-haiku-20240307-v1:0",
-        "EVAL_RESULTS_HANDLER_LAMBDA_NAME": evalResultsAPIHandlerFunction.functionName, // Include this if needed
-      },
-      timeout: cdk.Duration.seconds(600),
-      memorySize: 4096
+    this.stepFunctionsStack = new StepFunctionsStack(scope, 'StepFunctionsStack', {
+      knowledgeBase: props.knowledgeBase,
+      evalSummariesTable: props.evalSummariesTable,
+      evalResutlsTable: props.evalResutlsTable,
+      evalTestCasesBucket: props.evalTestCasesBucket
     });
-    llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        's3:*'
-      ],
-      resources: [props.evalTestCasesBucket.bucketArn,props.evalTestCasesBucket.bucketArn+"/*"]
-    }));
-    llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'lambda:InvokeFunction'
-      ],
-      resources: [this.sessionFunction.functionArn]
-    }));
-    llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'ecr:GetAuthorization',
-        'ecr:GetDownloadUrlForLayer',
-        'ecr:BatchGetImage',
-        'ecr:BatchCheckLayerAvailability'
-      ],
-      resources: ['*']
-    }));
-    llmEvalFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'bedrock:InvokeModelWithResponseStream',
-        'bedrock:InvokeModel'
-      ],
-      resources: ['*']
-    }));
 
-    props.evalResutlsTable.grantReadWriteData(llmEvalFunction);
-    props.evalTestCasesBucket.grantReadWrite(llmEvalFunction);
-    generateResponseFunction.grantInvoke(llmEvalFunction);
-    evalResultsAPIHandlerFunction.grantInvoke(llmEvalFunction);
-    this.llmEvalFunction = llmEvalFunction;
   }
 }

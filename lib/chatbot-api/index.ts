@@ -179,14 +179,19 @@ export class ChatBotApi extends Construct {
 
     const evalRunHandlerIntegration = new HttpLambdaIntegration(
       'EvalRunHandlerIntegration',
-      lambdaFunctions.llmEvalFunction
+      lambdaFunctions.stepFunctionsStack.startLlmEvalStateMachineFunction
     );
+
+    // const evalRunHandlerIntegration = new HttpLambdaIntegration(
+    //   'EvalRunHandlerIntegration',
+    //   lambdaFunctions.llmEvalFunction
+    // ); 
     restBackend.restAPI.addRoutes({
       path: "/eval-run-handler",
       methods: [apigwv2.HttpMethod.POST],
       integration: evalRunHandlerIntegration,
       authorizer: httpAuthorizer,
-    });
+    }); 
 
 
       // this.wsAPI = websocketBackend.wsAPI;

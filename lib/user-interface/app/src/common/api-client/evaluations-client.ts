@@ -63,7 +63,6 @@ export class EvaluationsClient {
   }
   async startNewEvaluation(evaluationName: string, testCaseFile: String) {
     const auth = await Utils.authenticate();
-    console.log("\n\n\n\n\n\n\n\n" + testCaseFile + "\n\n\n\n\n\n\n\n");
     const body: any = {
       // operation: "start_new_evaluation",
       evaluation_name: evaluationName,
@@ -77,7 +76,7 @@ export class EvaluationsClient {
         "Content-Type": "application/json",
         Authorization: auth,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body), 
     });
     if (!response.ok) {
       throw new Error("Failed to start new evaluation");

@@ -83,7 +83,7 @@ const EVAL_SUMMARY_COLUMN_DEFINITIONS = [
   {
     id: "evalTestCaseKey",
     header: "Test Case Filename",
-    cell: (item) => <TruncatedTextCell text={item.test_case_key || "Unnamed Test Case"} maxLength={50}/>
+    cell: (item) => <TruncatedTextCell text={item.test_cases_key || "Unnamed Test Case"} maxLength={50}/>
   },
   {
     id: "timestamp",
