@@ -58,7 +58,7 @@ export class ChatBotApi extends Construct {
         evalSummariesTable : tables.evalSummaryTable,
         evalResutlsTable : tables.evalResultsTable,
         evalTestCasesBucket : buckets.evalTestCasesBucket,
-        ragasDependenciesBucket : buckets.ragasDependenciesBucket,
+        systemPromptsTable : tables.systemPromptsTable,
       })
 
     const wsAuthorizer = new WebSocketLambdaAuthorizer('WebSocketAuthorizer', props.authentication.lambdaAuthorizer, {identitySource: ['route.request.querystring.Authorization']});
@@ -100,7 +100,7 @@ export class ChatBotApi extends Construct {
     //   "mvp_user_session_handler_api_gateway_endpoint", restBackend.restAPI.apiEndpoint + "/user-session")
     lambdaFunctions.chatFunction.addEnvironment(
       "SESSION_HANDLER", lambdaFunctions.sessionFunction.functionName)
-    
+     
 
     const feedbackAPIIntegration = new HttpLambdaIntegration('FeedbackAPIIntegration', lambdaFunctions.feedbackFunction);
     restBackend.restAPI.addRoutes({
@@ -203,6 +203,17 @@ export class ChatBotApi extends Construct {
       integration: s3UploadTestCasesAPIIntegration,
       authorizer: httpAuthorizer,
     })
+
+    const systemPromptsAPIIntegration = new HttpLambdaIntegration(
+      'SystemPromptsAPIIntegration', 
+      lambdaFunctions.systemPromptsFunction
+    );
+    restBackend.restAPI.addRoutes({
+      path: "/system-prompts-handler",
+      methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST],
+      integration: systemPromptsAPIIntegration,
+      authorizer: httpAuthorizer,
+    });
 
 
       // this.wsAPI = websocketBackend.wsAPI;

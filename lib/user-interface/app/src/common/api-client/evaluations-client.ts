@@ -133,6 +133,7 @@ export class EvaluationsClient {
     if (!response.ok) {
       throw new Error('Failed to get files');
     }
+    console.log('response in the api', response);
     const result = await response.json();
     return result;
   }

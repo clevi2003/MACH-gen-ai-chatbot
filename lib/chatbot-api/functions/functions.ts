@@ -21,7 +21,7 @@ interface LambdaFunctionStackProps {
   readonly evalSummariesTable : Table;
   readonly evalResutlsTable : Table;
   readonly evalTestCasesBucket : s3.Bucket;
-  readonly ragasDependenciesBucket : s3.Bucket;
+  readonly systemPromptsTable : Table;
 }
 
 export class LambdaFunctionStack extends cdk.Stack {  
@@ -38,6 +38,7 @@ export class LambdaFunctionStack extends cdk.Stack {
   //public readonly llmEvalFunction : lambda.Function;
   public readonly handleEvalResultsFunction : lambda.Function;
   public readonly stepFunctionsStack : StepFunctionsStack;
+  public readonly systemPromptsFunction : lambda.Function;
 
   constructor(scope: Construct, id: string, props: LambdaFunctionStackProps) {
     super(scope, id);    
@@ -67,6 +68,30 @@ export class LambdaFunctionStack extends cdk.Stack {
 
     this.sessionFunction = sessionAPIHandlerFunction;
 
+    const systemPromptsAPIHandlerFunction = new lambda.Function(scope, 'SystemPromptsHandlerFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/system-prompt-handler')), // Points to the lambda directory
+      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "SYSTEM_PROMPTS_TABLE" : props.systemPromptsTable.tableName
+      }
+    });
+    // Add permissions to the lambda function to read/write to the table
+    systemPromptsAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'dynamodb:GetItem',
+        'dynamodb:PutItem',
+        'dynamodb:UpdateItem',
+        'dynamodb:DeleteItem',
+        'dynamodb:Query',
+        'dynamodb:Scan'
+      ],
+      resources: [props.systemPromptsTable.tableArn, props.systemPromptsTable.tableArn + "/index/*"]
+    }));
+    this.systemPromptsFunction = systemPromptsAPIHandlerFunction;
+    props.systemPromptsTable.grantReadWriteData(systemPromptsAPIHandlerFunction);
+
         // Define the Lambda function resource
         const websocketAPIFunction = new lambda.Function(scope, 'ChatHandlerFunction', {
           runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
@@ -76,7 +101,9 @@ export class LambdaFunctionStack extends cdk.Stack {
             "WEBSOCKET_API_ENDPOINT" : props.wsApiEndpoint.replace("wss","https"),            
             "PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
             You have access to a search tool that you will use to look up answers to questions.`,
-            'KB_ID' : props.knowledgeBase.attrKnowledgeBaseId
+            'KB_ID' : props.knowledgeBase.attrKnowledgeBaseId,
+            'SESSION_HANDLER' : sessionAPIHandlerFunction.functionName,
+            'SYSTEM_PROMPTS_HANDLER' : systemPromptsAPIHandlerFunction.functionName
           },
           timeout: cdk.Duration.seconds(300)
         });
@@ -102,7 +129,7 @@ export class LambdaFunctionStack extends cdk.Stack {
           actions: [
             'lambda:InvokeFunction'
           ],
-          resources: [this.sessionFunction.functionArn]
+          resources: [this.sessionFunction.functionArn, this.systemPromptsFunction.functionArn]
         }));
         
         this.chatFunction = websocketAPIFunction;
@@ -194,7 +221,7 @@ export class LambdaFunctionStack extends cdk.Stack {
       actions: [
         's3:*'
       ],
-      resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
+      resources: [props.evalTestCasesBucket.bucketArn,props.evalTestCasesBucket.bucketArn+"/*"]
     }));
     this.getS3TestCasesFunction = getS3TestCasesAPIHandlerFunction;
 
@@ -253,7 +280,7 @@ export class LambdaFunctionStack extends cdk.Stack {
       actions: [
         's3:*'
       ],
-      resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
+      resources: [props.evalTestCasesBucket.bucketArn,props.evalTestCasesBucket.bucketArn+"/*"]
     }));
     this.uploadS3TestCasesFunction = uploadS3TestCasesFunction;
 
@@ -287,7 +314,8 @@ export class LambdaFunctionStack extends cdk.Stack {
       knowledgeBase: props.knowledgeBase,
       evalSummariesTable: props.evalSummariesTable,
       evalResutlsTable: props.evalResutlsTable,
-      evalTestCasesBucket: props.evalTestCasesBucket
+      evalTestCasesBucket: props.evalTestCasesBucket,
+      systemPromptsHandlerName: systemPromptsAPIHandlerFunction.functionName
     });
 
   }
