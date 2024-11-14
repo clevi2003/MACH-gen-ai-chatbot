@@ -12,6 +12,7 @@ import GlobalHeader from "./components/global-header";
 import Playground from "./pages/chatbot/playground/playground";
 import DataPage from "./pages/admin/data-view-page";
 import UserFeedbackPage from "./pages/admin/user-feedback-page";
+import CongigurationPage from "./pages/admin/configuration-page.tsx";
 import LlmEvaluationPage from "./pages/admin/llm-evaluation-page"; 
 import DetailedEvaluationPage from "./pages/admin/detailed-evaluation-page";
 import SessionPage from "./pages/chatbot/sessions/sessions"
@@ -40,6 +41,7 @@ function App() {
             </Route>
             <Route path="/admin" element={<Outlet />}>                 
              <Route path="data" element={<DataPage />} />   
+             <Route path="configuration" element={<CongigurationPage />} /> 
              <Route path="user-feedback" element={<UserFeedbackPage />} /> 
              <Route path="llm-evaluation" element={<Outlet />}>
             <Route index element={<LlmEvaluationPage />} />
