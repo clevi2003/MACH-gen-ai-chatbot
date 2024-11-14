@@ -1,294 +1,209 @@
 import {
-  Button,
-  Container,
-  FileUpload,
-  Flashbar,
-  FlashbarProps,
-  Form,
-  FormField,
-  Input,
-  ProgressBar,
-  ProgressBarProps,
-  Select,
-  SelectProps,
-  SpaceBetween,
-} from "@cloudscape-design/components";
-import { useContext, useState } from "react";
-import { AppContext } from "../../common/app-context";
-import { ApiClient } from "../../common/api-client/api-client";
-import { Utils } from "../../common/utils";
-import { FileUploader } from "../../common/file-uploader";
-import { useNavigate } from "react-router-dom";
-import { useNotifications } from "../../components/notif-manager";
-
-const fileExtensions = new Set([".csv", ".xlsx"]);
-
-const mimeTypes = {
-  ".pdf": "application/pdf",
-  ".doc": "application/msword",
-  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ".xls": "application/vnd.ms-excel",
-  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ".ppt": "application/vnd.ms-powerpoint",
-  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  ".txt": "text/plain",
-  ".csv": "text/csv",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".svg": "image/svg+xml",
-  ".mp3": "audio/mpeg",
-  ".wav": "audio/wav",
-  ".mp4": "video/mp4",
-  ".zip": "application/zip",
-  ".rar": "application/x-rar-compressed",
-  ".tar": "application/x-tar",
-};
-
-export interface FileUploadTabProps {
-  tabChangeFunction: () => void;
-}
-
-export default function NewEvalTab(props: FileUploadTabProps) {
-  const appContext = useContext(AppContext);
-  const apiClient = new ApiClient(appContext);
-  const navigate = useNavigate();
-  const [files, setFiles] = useState<File[]>([]);
-  const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
-  const [fileErrors, setFileErrors] = useState<string[]>([]);
-  const [globalError, setGlobalError] = useState<string | undefined>(undefined);
-  const [uploadError, setUploadError] = useState<string | undefined>(undefined);
-  const [uploadingStatus, setUploadingStatus] =
-    useState<FlashbarProps.Type>("info");
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [uploadingIndex, setUploadingIndex] = useState<number>(0);
-  const [currentFileName, setCurrentFileName] = useState<string>("");
-  const [uploadPanelDismissed, setUploadPanelDismissed] =
-    useState<boolean>(false);
-  const { addNotification } = useNotifications();
-
-  const [evalName, setEvalName] = useState<string>("SampleEvalName");
-
-  const onSetFiles = (files: File[]) => {
-    const errors: string[] = [];
-    const filesToUpload: File[] = [];
-    setUploadError(undefined);
-
-    if (files.length > 100) {
-      setUploadError("Max 100 files allowed");
-      files = files.slice(0, 100);
-    }
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const fileExtension = file.name.split(".").pop()?.toLowerCase();
-
-      if (!fileExtensions.has(`.${fileExtension}`)) {
-        errors[i] = "Format not supported";
-      } else if (file.size > 1000 * 1000 * 100) {
-        errors[i] = "File size is too large, max 100MB";
-      } else {
-        filesToUpload.push(file);
+    Box,
+    Button,
+    Container,
+    Form,
+    Header,
+    Input,
+    Pagination,
+    SpaceBetween,
+    Table,
+  } from "@cloudscape-design/components";
+  import { useCallback, useContext, useEffect, useState } from "react";
+  import { AppContext } from "../../common/app-context";
+  import { ApiClient } from "../../common/api-client/api-client";
+  import { Utils } from "../../common/utils";
+  import { useNotifications } from "../../components/notif-manager";
+  import { useCollection } from "@cloudscape-design/collection-hooks";
+  import { getColumnDefinition } from "./columns";
+  import { AdminDataType } from "../../common/types";
+  
+  export interface FileUploadTabProps {
+    tabChangeFunction: () => void;
+    documentType: AdminDataType;
+  }
+  
+  export default function NewEvalTab(props: FileUploadTabProps) {
+    const appContext = useContext(AppContext);
+    const apiClient = new ApiClient(appContext);
+    const { addNotification } = useNotifications();
+  
+    const [evalName, setEvalName] = useState<string>("SampleEvalName");
+    const [globalError, setGlobalError] = useState<string | undefined>(undefined);
+  
+    const [loading, setLoading] = useState(true);
+    const [currentPageIndex, setCurrentPageIndex] = useState(1);
+    const [pages, setPages] = useState<any[]>([]);
+    const [selectedFile, setSelectedFile] = useState<any | null>(null);
+  
+    const { items, collectionProps, paginationProps } = useCollection(pages, {
+      filtering: {
+        empty: (
+          <Box margin={{ vertical: "xs" }} textAlign="center" color="inherit">
+            <SpaceBetween size="m">
+              <b>No files</b>
+            </SpaceBetween>
+          </Box>
+        ),
+      },
+      pagination: { pageSize: 5 },
+      sorting: {
+        defaultState: {
+          sortingColumn: {
+            sortingField: "Key",
+          },
+          isDescending: true,
+        },
+      },
+      selection: {},
+    });
+  
+    const onNewEvaluation = () => {
+      if (evalName === "SampleEvalName" || evalName.trim() === "") {
+        setGlobalError("Please enter a name for the evaluation");
+        return;
       }
-    }
-
-    setFiles(files);
-    setFileErrors(errors);
-    setFilesToUpload(filesToUpload);
-  };
-
-  const onUpload = async () => {
-    if (!appContext) return;
-    setUploadingStatus("in-progress");
-    setUploadProgress(0);
-    setUploadingIndex(1);
-    setUploadPanelDismissed(false);
-
-    const uploader = new FileUploader();
-    const totalSize = filesToUpload.reduce((acc, file) => acc + file.size, 0);
-    let accumulator = 0;
-    let hasError = false;
-
-    for (let i = 0; i < filesToUpload.length; i++) {
-      const file = filesToUpload[i];
-      setCurrentFileName(file.name);
-      let fileUploaded = 0;
-
+      if (!selectedFile) {
+        setGlobalError("Please select a file for evaluation");
+        return;
+      }
       try {
-        const fileExtension = file.name
-          .slice(file.name.lastIndexOf("."))
-          .toLowerCase();
-        const fileType = mimeTypes[fileExtension];
-        const result = await apiClient.knowledgeManagement.getUploadURL(
-          file.name,
-          fileType
-        );
-
-        try {
-          await uploader.upload(
-            file,
-            result,
-            fileType,
-            (uploaded: number) => {
-              fileUploaded = uploaded;
-              const totalUploaded = fileUploaded + accumulator;
-              const percent = Math.round((totalUploaded / totalSize) * 100);
-              setUploadProgress(percent);
-            }
-          );
-
-          accumulator += file.size;
-          setUploadingIndex(Math.min(filesToUpload.length, i + 2));
-        } catch (error) {
-          console.error(error);
-          setUploadingStatus("error");
-          hasError = true;
-          break;
-        }
-      } catch (error: any) {
-        setGlobalError(Utils.getErrorMessage(error));
+        apiClient.evaluations.startNewEvaluation(evalName, selectedFile.Key);
+        addNotification("success", "Evaluation started successfully.");
+      } catch (error) {
         console.error(Utils.getErrorMessage(error));
-        setUploadingStatus("error");
-        hasError = true;
-        break;
+        addNotification("error", "Error starting new evaluation. Please try again.");
       }
-    }
-
-    if (!hasError) {
-      setUploadingStatus("success");
-      setFilesToUpload([]);
-      setFiles([]);
-    }
-  };
-
-  const getProgressbarStatus = (): ProgressBarProps.Status => {
-    if (uploadingStatus === "error") return "error";
-    if (uploadingStatus === "success") return "success";
-    return "in-progress";
-  };
-
-  const onNewEvaluation = () => {
-    if (evalName === "SampleEvalName" || evalName.trim() === "") {
-      setGlobalError("Please enter a name for the evaluation");
-      return;
-    }
-    try {
-      const response = apiClient.evaluations.startNewEvaluation(evalName, "test_cases.csv");
-    } 
-    catch (error) {
-      console.error(Utils.getErrorMessage(error));
-      addNotification("error", "Error starting new evaluation. Please try again.");
-    }
-    finally {
-      addNotification("success", "Call sent!");
-    }
-  };
-
-  return (
-    <Form
-      actions={
-        <SpaceBetween direction="vertical" size="xs">
-          <Button
-            data-testid="create"
-            variant="primary"
-            disabled={
-              filesToUpload.length === 0 || uploadingStatus === "in-progress"
+    };
+  
+    /** Function to get documents */
+    const getDocuments = useCallback(
+        async (params: { continuationToken?: string; pageIndex?: number }) => {
+        setLoading(true);
+        try {
+            const result = await apiClient.evaluations.getDocuments(params?.continuationToken, params?.pageIndex)
+            // await props.statusRefreshFunction();
+            setPages((current) => {
+            if (typeof params.pageIndex !== "undefined") {
+                current[params.pageIndex - 1] = result;
+                return [...current];
+            } else {
+                return [...current, result];
             }
-            onClick={onUpload}
-          >
-            Upload files
-          </Button>
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center"}}>
-            <Button
-              data-testid="new-evaluation"
-              variant="primary"
-              onClick={onNewEvaluation}
-            >
-              Create New Evaluation
-            </Button>
-          </div>
-        </SpaceBetween>
-      }
-      errorText={globalError}
-    >
-      <SpaceBetween size="l">
-        <Container>
+            });
+        } catch (error) {
+            console.error(Utils.getErrorMessage(error));
+        }
+
+        console.log(pages);
+        setLoading(false);
+        },
+        [appContext, props.documentType]
+    );
+
+    /** Whenever the memoized function changes, call it again */
+    useEffect(() => {
+        getDocuments({});
+    }, [getDocuments]);
+
+    /** Handle clicks on the next page button, as well as retrievals of new pages if needed*/
+    const onNextPageClick = async () => {
+        const continuationToken = pages[currentPageIndex - 1]?.NextContinuationToken;
+
+        if (continuationToken) {
+        if (pages.length <= currentPageIndex) {
+            await getDocuments({ continuationToken });
+        }
+        setCurrentPageIndex((current) => Math.min(pages.length + 1, current + 1));
+        }
+    };
+
+    /** Handle clicks on the previous page button */
+    const onPreviousPageClick = async () => {
+        setCurrentPageIndex((current) =>
+        Math.max(1, Math.min(pages.length - 1, current - 1))
+        );
+    };
+
+    /** Handle refreshes */
+    const refreshPage = async () => {
+        // console.log(pages[Math.min(pages.length - 1, currentPageIndex - 1)]?.Contents!)
+        if (currentPageIndex <= 1) {
+        await getDocuments({ pageIndex: currentPageIndex });
+        } else {
+        const continuationToken = pages[currentPageIndex - 2]?.NextContinuationToken!;
+        await getDocuments({ continuationToken });
+        }
+    };
+  
+    const columnDefinitions = getColumnDefinition(props.documentType);
+  
+    return (
+      <>
+        <Form errorText={globalError}>
           <SpaceBetween size="l">
-            <FormField label="Evaluation Name">
-              <Input
-                value={evalName}
-                placeholder="SampleEvalName"
-                onChange={(event) => setEvalName(event.detail.value)}
-              />
-            </FormField>
-            <FormField>
-              <FileUpload
-                onChange={({ detail }) => onSetFiles(detail.value)}
-                value={files}
-                i18nStrings={{
-                  uploadButtonText: (e) => (e ? "Choose files" : "Choose file"),
-                  dropzoneText: (e) =>
-                    e ? "Drop files to upload" : "Drop file to upload",
-                  removeFileAriaLabel: (e) => `Remove file ${e + 1}`,
-                  limitShowFewer: "Show fewer files",
-                  limitShowMore: "Show more files",
-                  errorIconAriaLabel: "Error",
-                }}
-                multiple
-                showFileLastModified
-                showFileSize
-                showFileThumbnail
-                tokenLimit={3}
-                constraintText={`Text documents up to 100MB supported (${Array.from(
-                  fileExtensions.values()
-                ).join(", ")})`}
-                fileErrors={fileErrors}
-                errorText={uploadError}
-              />
-            </FormField>
-          </SpaceBetween>
-        </Container>
-        {uploadingStatus !== "info" && !uploadPanelDismissed && (
-          <Flashbar
-            items={[
-              {
-                content: (
-                  <ProgressBar
-                    value={uploadProgress}
-                    variant="flash"
-                    description={
-                      uploadingStatus === "success" ||
-                      uploadingStatus === "error"
-                        ? null
-                        : currentFileName
-                    }
-                    label={
-                      uploadingStatus === "success" ||
-                      uploadingStatus === "error"
-                        ? "Uploading files"
-                        : `Uploading files ${uploadingIndex} of ${filesToUpload.length}`
-                    }
-                    status={getProgressbarStatus()}
-                    resultText={
-                      uploadingStatus === "success"
-                        ? "Upload complete"
-                        : "Upload failed"
-                    }
+            <Container>
+              <SpaceBetween direction="horizontal" size="s">
+                <label style={{ alignSelf: 'center' }}>Evaluation Name:</label>
+                <Input
+                  value={evalName}
+                  placeholder="SampleEvalName"
+                  onChange={(event) => setEvalName(event.detail.value)}
+                />
+                <Button
+                  data-testid="new-evaluation"
+                  variant="primary"
+                  onClick={onNewEvaluation}
+                  disabled={!selectedFile}
+                >
+                  Create New Evaluation
+                </Button>
+              </SpaceBetween>
+            </Container>
+  
+            {/* Adding space between the container and table */}
+            <Box padding={{ top: "xxs" }} />
+  
+            {/* Table Section */}
+            <Table
+              {...collectionProps}
+              loading={loading}
+              loadingText={`Loading files`}
+              columnDefinitions={columnDefinitions}
+              selectionType="single"
+              onSelectionChange={({ detail }) => {
+                const clickedFile = detail.selectedItems[0];
+                setSelectedFile((prev) => (clickedFile && prev && clickedFile.Key === prev.Key ? null : clickedFile));
+              }}
+              selectedItems={selectedFile ? [selectedFile] : []}
+              items={pages[Math.min(pages.length - 1, currentPageIndex - 1)]?.Contents!}
+              trackBy="Key"
+              header={
+                <Header
+                  actions={
+                    <Button iconName="refresh" onClick={refreshPage} />
+                  }
+                  description="Please select a test case file for your next evaluation. Press the refresh button to see the latest test case files."
+                >
+                  {"Files"}
+                </Header>
+              }
+              empty={<Box textAlign="center">No test case files uploaded. Please upload a test case file before running an evaluation.</Box>}
+              pagination={
+                pages.length > 0 && (
+                  <Pagination
+                    openEnd={true}
+                    pagesCount={pages.length}
+                    currentPageIndex={currentPageIndex}
+                    onNextPageClick={onNextPageClick}
+                    onPreviousPageClick={onPreviousPageClick}
                   />
-                ),
-                type: uploadingStatus,
-                dismissible:
-                  uploadingStatus === "success" || uploadingStatus === "error",
-                onDismiss: () => setUploadPanelDismissed(true),
-                buttonText:
-                  uploadingStatus === "success" ? "View files" : undefined,
-                onButtonClick: () => props.tabChangeFunction(),
-              },
-            ]}
-          />
-        )}
-      </SpaceBetween>
-    </Form>
-  );
-}
+                )
+              }
+            />
+          </SpaceBetween>
+        </Form>
+      </>
+    );
+  }
+  

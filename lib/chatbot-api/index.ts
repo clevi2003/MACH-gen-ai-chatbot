@@ -118,11 +118,19 @@ export class ChatBotApi extends Construct {
       authorizer: httpAuthorizer,
     })
 
-    const s3GetAPIIntegration = new HttpLambdaIntegration('S3GetAPIIntegration', lambdaFunctions.getS3Function);
+    const s3GetKnowledgeAPIIntegration = new HttpLambdaIntegration('S3GetKnowledgeAPIIntegration', lambdaFunctions.getS3KnowledgeFunction);
     restBackend.restAPI.addRoutes({
-      path: "/s3-bucket-data",
+      path: "/s3-knowledge-bucket-data",
       methods: [apigwv2.HttpMethod.POST],
-      integration: s3GetAPIIntegration,
+      integration: s3GetKnowledgeAPIIntegration,
+      authorizer: httpAuthorizer,
+    })
+
+    const s3GetTestCasesAPIIntegration = new HttpLambdaIntegration('S3GetTestCasesAPIIntegration', lambdaFunctions.getS3TestCasesFunction);
+    restBackend.restAPI.addRoutes({
+      path: "/s3-test-cases-bucket-data",
+      methods: [apigwv2.HttpMethod.POST],
+      integration: s3GetTestCasesAPIIntegration,
       authorizer: httpAuthorizer,
     })
 
@@ -134,11 +142,11 @@ export class ChatBotApi extends Construct {
       authorizer: httpAuthorizer,
     })
 
-    const s3UploadAPIIntegration = new HttpLambdaIntegration('S3UploadAPIIntegration', lambdaFunctions.uploadS3Function);
+    const s3UploadKnowledgeAPIIntegration = new HttpLambdaIntegration('S3UploadKnowledgeAPIIntegration', lambdaFunctions.uploadS3KnowledgeFunction);
     restBackend.restAPI.addRoutes({
-      path: "/signed-url",
+      path: "/signed-url-knowledge",
       methods: [apigwv2.HttpMethod.POST],
-      integration: s3UploadAPIIntegration,
+      integration: s3UploadKnowledgeAPIIntegration,
       authorizer: httpAuthorizer,
     })
 
@@ -181,17 +189,20 @@ export class ChatBotApi extends Construct {
       'EvalRunHandlerIntegration',
       lambdaFunctions.stepFunctionsStack.startLlmEvalStateMachineFunction
     );
-
-    // const evalRunHandlerIntegration = new HttpLambdaIntegration(
-    //   'EvalRunHandlerIntegration',
-    //   lambdaFunctions.llmEvalFunction
-    // ); 
     restBackend.restAPI.addRoutes({
       path: "/eval-run-handler",
       methods: [apigwv2.HttpMethod.POST],
       integration: evalRunHandlerIntegration,
       authorizer: httpAuthorizer,
     }); 
+
+    const s3UploadTestCasesAPIIntegration = new HttpLambdaIntegration('S3UploadTestCasesAPIIntegration', lambdaFunctions.uploadS3TestCasesFunction);
+    restBackend.restAPI.addRoutes({
+      path: "/signed-url-test-cases",
+      methods: [apigwv2.HttpMethod.POST],
+      integration: s3UploadTestCasesAPIIntegration,
+      authorizer: httpAuthorizer,
+    })
 
 
       // this.wsAPI = websocketBackend.wsAPI;

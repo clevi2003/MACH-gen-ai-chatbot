@@ -20,7 +20,7 @@ export class KnowledgeManagementClient {
 
     try {
       const auth = await Utils.authenticate();
-      const response = await fetch(this.API + '/signed-url', {
+      const response = await fetch(this.API + '/signed-url-knowledge', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,7 +44,7 @@ export class KnowledgeManagementClient {
   // Returns a list of documents in the S3 bucket (hard-coded on the backend)
   async getDocuments(continuationToken?: string, pageIndex?: number) {
     const auth = await Utils.authenticate();
-    const response = await fetch(this.API + '/s3-bucket-data', {
+    const response = await fetch(this.API + '/s3-knowledge-bucket-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

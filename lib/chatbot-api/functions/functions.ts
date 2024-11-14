@@ -29,8 +29,10 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly sessionFunction : lambda.Function;
   public readonly feedbackFunction : lambda.Function;
   public readonly deleteS3Function : lambda.Function;
-  public readonly getS3Function : lambda.Function;
-  public readonly uploadS3Function : lambda.Function;
+  public readonly getS3KnowledgeFunction : lambda.Function;
+  public readonly getS3TestCasesFunction : lambda.Function;
+  public readonly uploadS3KnowledgeFunction : lambda.Function;
+  public readonly uploadS3TestCasesFunction : lambda.Function;
   public readonly syncKBFunction : lambda.Function;
   //public readonly generateResponseFunction : lambda.Function;
   //public readonly llmEvalFunction : lambda.Function;
@@ -158,7 +160,7 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.deleteS3Function = deleteS3APIHandlerFunction;
 
-    const getS3APIHandlerFunction = new lambda.Function(scope, 'GetS3FilesHandlerFunction', {
+    const getS3KnowledgeAPIHandlerFunction = new lambda.Function(scope, 'GetS3KnowledgeFilesHandlerFunction', {
       runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
       code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/get-s3')), // Points to the lambda directory
       handler: 'index.handler', // Points to the 'hello' file in the lambda directory
@@ -168,14 +170,33 @@ export class LambdaFunctionStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30)
     });
 
-    getS3APIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+    getS3KnowledgeAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
         's3:*'
       ],
       resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
     }));
-    this.getS3Function = getS3APIHandlerFunction;
+    this.getS3KnowledgeFunction = getS3KnowledgeAPIHandlerFunction;
+
+    const getS3TestCasesAPIHandlerFunction = new lambda.Function(scope, 'GetS3TestCasesFilesHandlerFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'llm-eval/S3-get-test-cases')), // Points to the lambda directory
+      handler: 'index.handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "BUCKET" : props.evalTestCasesBucket.bucketName,        
+      },
+      timeout: cdk.Duration.seconds(30)
+    });
+
+    getS3TestCasesAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        's3:*'
+      ],
+      resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
+    }));
+    this.getS3TestCasesFunction = getS3TestCasesAPIHandlerFunction;
 
 
     const kbSyncAPIHandlerFunction = new lambda.Function(scope, 'SyncKBHandlerFunction', {
@@ -198,7 +219,7 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.syncKBFunction = kbSyncAPIHandlerFunction;
 
-    const uploadS3APIHandlerFunction = new lambda.Function(scope, 'UploadS3FilesHandlerFunction', {
+    const uploadS3KnowledgeAPIHandlerFunction = new lambda.Function(scope, 'UploadS3KnowledgeFilesHandlerFunction', {
       runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
       code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/upload-s3')), // Points to the lambda directory
       handler: 'index.handler', // Points to the 'hello' file in the lambda directory
@@ -208,19 +229,38 @@ export class LambdaFunctionStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30)
     });
 
-    uploadS3APIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+    uploadS3KnowledgeAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
         's3:*'
       ],
       resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
     }));
-    this.uploadS3Function = uploadS3APIHandlerFunction;
+    this.uploadS3KnowledgeFunction = uploadS3KnowledgeAPIHandlerFunction;
+
+    const uploadS3TestCasesFunction = new lambda.Function(scope, 'UploadS3TestCasesFilesHandlerFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'llm-eval/S3-upload')), // Points to the lambda directory
+      handler: 'index.handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "BUCKET" : props.evalTestCasesBucket.bucketName,        
+      },
+      timeout: cdk.Duration.seconds(30)
+    });
+
+    uploadS3TestCasesFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        's3:*'
+      ],
+      resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
+    }));
+    this.uploadS3TestCasesFunction = uploadS3TestCasesFunction;
 
 
     const evalResultsAPIHandlerFunction = new lambda.Function(scope, 'EvalResultsHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
-      code: lambda.Code.fromAsset(path.join(__dirname, 'eval-results-handler')), // Points to the lambda directory
+      code: lambda.Code.fromAsset(path.join(__dirname, 'llm-eval/eval-results-handler')), // Points to the lambda directory
       handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
       environment: {
         "EVALUATION_RESULTS_TABLE" : props.evalResutlsTable.tableName,

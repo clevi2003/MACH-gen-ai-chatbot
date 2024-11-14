@@ -12,7 +12,7 @@ import {
   import CurrentEvalTab from "./current-eval-tab";
   import NewEvalTab from "./new-eval-tab";
   import PastEvalsTab from "./past-evals-tab";
-  import DocumentsTab from "./documents-tab";
+  import TestCasesTab from "./test-cases-tab";
   import { CHATBOT_NAME } from "../../common/constants";
   import { useState, useEffect, useContext } from "react";
   import { Auth } from "aws-amplify";
@@ -153,14 +153,24 @@ import {
                     ),
                     },
                     {
-                    label: "New Evaluation",
-                    id: "new-eval",
+                    label: "Add Test Cases",
+                    id: "add-test-cases",
                     content: (
-                        <NewEvalTab 
-                        tabChangeFunction={() => setActiveTab("new-eval")}
+                        <TestCasesTab 
+                        tabChangeFunction={() => setActiveTab("add-test-cases")}
                         />
                     ),
                     },
+                    { 
+                      label: "New Evaluation",
+                      id: "new-eval",
+                      content: (
+                          <NewEvalTab 
+                          tabChangeFunction={() => setActiveTab("new-eval")}
+                          documentType="file"
+                          />
+                      ),
+                      },
                 ]}
                 activeTabId={activeTab}
                 onChange={({ detail: { activeTabId } }) => {
