@@ -142,8 +142,8 @@ export default function Chat(props: { sessionId?: string}) {
         {/* Render the welcome content */}
         <div className={styles.welcome_container}>
           {/* Main bubble */}
-          <div className={styles.welcome_topics_container}>
-            <div className={styles.welcome_main_bubble}> 
+          <div className={styles.welcome_header_container}>
+            <div> 
               {WELCOME_MESSAGE}
             </div>
           </div>

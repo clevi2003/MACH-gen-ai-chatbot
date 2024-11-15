@@ -85,6 +85,18 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 20px;
+  margin-top: 15px;
+}
+
+.welcome_header_container {
+  font-size: 1.25rem; /* Larger font size */
+  color: #656871;
+  font-weight: 700;
+  margin-bottom: 20px;
+  font-family: 'Open Sans', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .welcome_main_bubble {
@@ -129,7 +141,7 @@
 .welcome_topic_bubble {
   background: white;
   color: #656871;
-  padding: 15px;
+  padding: 15px 17px;
   border-radius: 15px;
   margin: 5px;
   // font-size: 1.2rem; 
@@ -139,23 +151,24 @@
   cursor: default;
   font-family: 'Open Sans', sans-serif;
   position: relative;
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 15px; /* Matches the border radius of the bubble */
-    background: linear-gradient(
-      rgba(200, 200, 200, 0.3), /* Light gray with transparency */
-      rgba(255, 255, 255, 0)
-    );
-    z-index: -1; /* Ensures the gradient shadow stays behind the bubble */
-  }
+  border: 1px solid lightgrey;
+  // &::before {
+  //   content: '';
+  //   position: absolute;
+  //   top: 0;
+  //   left: 0;
+  //   width: 100%;
+  //   height: 100%;
+  //   border-radius: 15px; /* Matches the border radius of the bubble */
+  //   background: linear-gradient(
+  //     rgba(200, 200, 200, 0.3), /* Light gray with transparency */
+  //     rgba(255, 255, 255, 0)
+  //   );
+  //   z-index: -1; /* Ensures the gradient shadow stays behind the bubble */
+  // }
 
-  /* Shadow effect from all sides */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Light shadow for additional separation */
+  // /* Shadow effect from all sides */
+  // box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Light shadow for additional separation */
 }
 
 @media (min-width: 600px) {

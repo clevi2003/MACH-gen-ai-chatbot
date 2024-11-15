@@ -44,7 +44,7 @@ export const feedbackTypes = [
 export const CHATBOT_NAME = "RAG AI Chatbot";
 
 export const WELCOME_MESSAGE =
-  "Hi! I’m your MATCH (MA Academics to Careers Helper) chatbot. What can I help you with?";
+  "Hi! I’m your MATCH chatbot. What can I help you with?";
 
 export const WELCOME_TOPICS = [
   "Course and program descriptions",

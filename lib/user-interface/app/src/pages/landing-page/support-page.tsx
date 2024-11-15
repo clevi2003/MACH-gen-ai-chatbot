@@ -18,7 +18,7 @@ import {
   import { ApiClient } from "../../common/api-client/api-client";
   import { AppContext } from "../../common/app-context";
   
-  export default function LandingPage() {
+  export default function HowToUsePage() {
     const onFollow = useOnFollow();
     const [activeTab, setActiveTab] = useState("file");
     const appContext = useContext(AppContext);
@@ -46,13 +46,12 @@ import {
                       variant="h3"
                       // description="Container description"
                     >
-                      An AI-powered chatbot that helps students explore academic and career paths.
+                      Support for Using the MACH Chatbot
                     </Header>                
                   }
                 >
                   <SpaceBetween size="xxs">
-                  The MATCH Chatbot is designed to help you research how specific courses and programs at public higher education institutions within MA can set you up for a fullfilling career.
-    
+                  Have a question or need help using the MATCH Chatbot? Check out the FAQs or contact support for assistance.
                   <br></br>
           
                   </SpaceBetween>
@@ -60,8 +59,8 @@ import {
                 <Tabs
                   tabs={[
                       {
-                      label: "About the MATCH Chatbot",
-                      id: "about-the-tool",
+                      label: "FAQs",
+                      id: "faqs",
                     //   content: (
                     //       <AboutTheToolTab
                     //       tabChangeFunction={() => setActiveTab("about-the-tool")}
@@ -69,21 +68,12 @@ import {
                     //   ),
                       },
                       {
-                      label: "How To Use MATCH",
-                      id: "how-to-use",
+                      label: "Support",
+                      id: "support",
                     //   content: (
                     //     <HowToUseTab 
                     //       tabChangeFunction={() => setActiveTab("how-to-use")}
                     //     />
-                    //   ),
-                      },
-                      {
-                      label: "FAQs and Support",
-                      id: "support",
-                    //   content: (
-                    //       <SupportTab 
-                    //       tabChangeFunction={() => setActiveTab("support")}
-                    //       />
                     //   ),
                       },
                   ]}
