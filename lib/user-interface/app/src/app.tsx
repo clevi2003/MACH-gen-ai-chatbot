@@ -15,10 +15,12 @@ import UserFeedbackPage from "./pages/admin/user-feedback-page";
 import SessionPage from "./pages/chatbot/sessions/sessions"
 import { v4 as uuidv4 } from "uuid";
 import "./styles/app.scss";
-import InterestTest from "./pages/chatbot/interest-test/interest-test";
+import AboutPage from "./pages/landing-page/about-page";
+import HowToUsePage from "./pages/landing-page/how-to-use-page";
+import SupportPage from "./pages/landing-page/support-page";
 
 function App() {
-  const appContext = useContext(AppContext);
+  const appContext = useContext(AppContext); 
   const Router = BrowserRouter;
 
   return (
@@ -31,12 +33,17 @@ function App() {
             <Route
                 index
                 path="/"
-                element={<Navigate to={`/chatbot/playground/${uuidv4()}`} replace />}
+                element={<Navigate to={`/home/about`} replace />}
+                // element={<Navigate to={`/chatbot/playground/${uuidv4()}`} replace />}
             />            
+            <Route path="/home" element={<Outlet />}>                 
+             <Route path="about" element={<AboutPage />} />   
+             <Route path="how-to-use" element={<HowToUsePage />} />  
+             <Route path="support" element={<SupportPage />} />                          
+            </Route>
             <Route path="/chatbot" element={<Outlet />}>
               <Route path="playground/:sessionId" element={<Playground />} />
               <Route path="sessions" element={<SessionPage />} /> 
-              <Route path="interest-test/:sessionId" element={<InterestTest />} /> {/* New Route */}  // new             
             </Route>
             <Route path="/admin" element={<Outlet />}>                 
              <Route path="data" element={<DataPage />} />   

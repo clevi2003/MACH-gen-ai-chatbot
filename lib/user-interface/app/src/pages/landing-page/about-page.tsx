@@ -18,7 +18,7 @@ import {
   import { ApiClient } from "../../common/api-client/api-client";
   import { AppContext } from "../../common/app-context";
   
-  export default function LandingPage() {
+  export default function AboutPage() {
     const onFollow = useOnFollow();
     const [activeTab, setActiveTab] = useState("file");
     const appContext = useContext(AppContext);
@@ -60,7 +60,7 @@ import {
                 <Tabs
                   tabs={[
                       {
-                      label: "About the MATCH Chatbot",
+                      label: "Purpose and Capabilities",
                       id: "about-the-tool",
                     //   content: (
                     //       <AboutTheToolTab
@@ -69,7 +69,7 @@ import {
                     //   ),
                       },
                       {
-                      label: "How To Use MATCH",
+                      label: "What is RAG",
                       id: "how-to-use",
                     //   content: (
                     //     <HowToUseTab 
@@ -78,7 +78,7 @@ import {
                     //   ),
                       },
                       {
-                      label: "FAQs and Support",
+                      label: "Data Sources",
                       id: "support",
                     //   content: (
                     //       <SupportTab 

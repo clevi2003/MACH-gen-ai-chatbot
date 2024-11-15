@@ -19,6 +19,7 @@ import { v4 as uuidv4 } from "uuid";
 import { SessionRefreshContext } from "../common/session-refresh-context"
 import { useNotifications } from "../components/notif-manager";
 import { Utils } from "../common/utils.js";
+import { on } from "events";
 
 
 export default function NavigationPanel() {
@@ -82,6 +83,16 @@ export default function NavigationPanel() {
 
   const updateItems = async (sessions) => {
     let newItems: SideNavigationProps.Item[] = [
+      // add Home section with links for about, how to use, and support
+      {
+        type: "section",
+        text: "Home",
+        items: [
+          { type: "link", text: "About the MATCH Chatbot", href: "/home/about" },
+          { type: "link", text: "How to Use", href: "home/how-to-use" },
+          { type: "link", text: "Support", href: "home/support" },
+        ],
+      },
       {
         type: "section",
         text: "Session History",
