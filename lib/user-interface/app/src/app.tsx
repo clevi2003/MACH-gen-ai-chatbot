@@ -1,61 +1,59 @@
-import { useContext } from "react";
-import {
-  BrowserRouter,
-  HashRouter,
-  Outlet,
-  Route,
-  Routes,
-  Navigate,
-} from "react-router-dom";
+import React, { useContext } from "react";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AppContext } from "./common/app-context";
 import GlobalHeader from "./components/global-header";
 import Playground from "./pages/chatbot/playground/playground";
+import SessionPage from "./pages/chatbot/sessions/sessions";
 import DataPage from "./pages/admin/data-view-page";
 import UserFeedbackPage from "./pages/admin/user-feedback-page";
-import SessionPage from "./pages/chatbot/sessions/sessions"
+import LandingPage from "./pages/landing-page";
 import { v4 as uuidv4 } from "uuid";
 import "./styles/app.scss";
-import AboutPage from "./pages/landing-page/about-page";
-import HowToUsePage from "./pages/landing-page/how-to-use-page";
-import SupportPage from "./pages/landing-page/support-page";
 
 function App() {
-  const appContext = useContext(AppContext); 
-  const Router = BrowserRouter;
+  const appContext = useContext(AppContext);
 
   return (
     <div style={{ height: "100%" }}>
-      <Router>
-        <GlobalHeader />
-        <div style={{ height: "56px", backgroundColor: "#000716" }}>&nbsp;</div>
-        <div>
-          <Routes>            
-            <Route
-                index
-                path="/"
-                element={<Navigate to={`/home/about`} replace />}
-                // element={<Navigate to={`/chatbot/playground/${uuidv4()}`} replace />}
-            />            
-            <Route path="/home" element={<Outlet />}>                 
-             <Route path="about" element={<AboutPage />} />   
-             <Route path="how-to-use" element={<HowToUsePage />} />  
-             <Route path="support" element={<SupportPage />} />                          
-            </Route>
-            <Route path="/chatbot" element={<Outlet />}>
+      <BrowserRouter>
+        <Routes>
+          {/* Landing Page */}
+          <Route path="/" element={<LandingPage u4={uuidv4} />} />
+
+          {/* Grouped Routes with Global Header */}
+          <Route
+            element={
+              <>
+                <GlobalHeader />
+                <div style={{ height: "56px", backgroundColor: "#000716" }}>&nbsp;</div>
+                <Outlet /> {/* Ensure Outlet renders child routes */}
+              </>
+            }
+          >
+            {/* Chatbot Routes */}
+            <Route path="/chatbot">
               <Route path="playground/:sessionId" element={<Playground />} />
-              <Route path="sessions" element={<SessionPage />} /> 
+              <Route path="sessions" element={<SessionPage />} />
             </Route>
-            <Route path="/admin" element={<Outlet />}>                 
-             <Route path="data" element={<DataPage />} />   
-             <Route path="user-feedback" element={<UserFeedbackPage />} />                           
-            </Route>            
-            <Route path="*" element={<Navigate to={`/chatbot/playground/${uuidv4()}`} replace />} />
-          </Routes>
-        </div>
-      </Router>
+
+            {/* Admin Routes */}
+            <Route path="/admin">
+              <Route path="data" element={<DataPage />} />
+              <Route path="user-feedback" element={<UserFeedbackPage />} />
+            </Route>
+
+            
+          </Route>
+
+          {/* Catch-all Route */}
+          <Route
+            path="*"
+            element={<Navigate to={`/chatbot/playground/${uuidv4()}`} replace />}
+          />
+        </Routes>
+      </BrowserRouter>
     </div>
   );
 }
 
 export default App;
- 

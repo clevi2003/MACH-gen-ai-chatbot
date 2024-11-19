@@ -60,7 +60,7 @@ import {
                 <Tabs
                   tabs={[
                       {
-                      label: "Purpose and Capabilities",
+                      label: "Chatbot Capabilities",
                       id: "about-the-tool",
                     //   content: (
                     //       <AboutTheToolTab
