@@ -158,6 +158,10 @@ import {
                 >
                   Create New Evaluation
                 </Button>
+                <div hidden={!selectedFile} style={{ paddingTop: "s" }}>
+                  {/** Calculate the cost: bytes *  4 bytes/token * 1 kilotoken/ 1000 tokens * $0.00020 / output kilotoken * 3 metrics */}
+                    <b>Estimated Cost:</b> ${(selectedFile?.Size / 1000 / 4 * 0.0020 * 4).toFixed(4)}
+                </div>
               </SpaceBetween>
             </Container>
   
