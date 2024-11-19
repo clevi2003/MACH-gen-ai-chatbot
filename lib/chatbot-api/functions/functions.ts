@@ -36,6 +36,7 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly blsDataTransformFunction : lambda.Function;
   public readonly ossUpdateIndexFunction : lambda.Function;
   public readonly kbSyncWrapperFunction : lambda.Function;
+  public readonly gccfunc : lambda.Function;
 
   constructor(scope: Construct, id: string, props: LambdaFunctionStackProps) {
     super(scope, id);
@@ -43,6 +44,33 @@ export class LambdaFunctionStack extends cdk.Stack {
     //const layer = new LambdaLayerStack(this, 'LambdaLayerStack');
     //this.layer = layer;
 
+    const gccAPIHandlerFunction = new lambda.Function(scope, 'GCCHandlerFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'GCC-clean')),
+      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "BUCKET" : props.knowledgeBucket.bucketName
+      },
+      timeout: cdk.Duration.seconds(300)
+    });
+    // S3 bucket permissions
+    gccAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        's3:*'
+      ],
+      resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
+    }));
+    // texttract permissions
+    gccAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'textract:*'
+      ],
+      resources: ["*"]
+    }));
+    this.gccfunc = gccAPIHandlerFunction;
+    
     const sessionAPIHandlerFunction = new lambda.Function(scope, 'SessionHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
       code: lambda.Code.fromAsset(path.join(__dirname, 'session-handler')), // Points to the lambda directory
@@ -77,7 +105,14 @@ export class LambdaFunctionStack extends cdk.Stack {
             "WEBSOCKET_API_ENDPOINT" : props.wsApiEndpoint.replace("wss","https"),            
             "PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
             You have access to a search tool that you will use to look up answers to questions. You must 
-            respond to the user in the same language as their question`,
+            respond to the user in the same language as their question. Your goal is to help prospective 
+            students research how courses and programs at specific MA public higher education institutions 
+            can set them up for fulfilling careers. You have knowledge about career outlooks, the day to day 
+            tasks for careers, and the skills required for careers. You also have knowledge about the skills 
+            that courses and programs teach. You only know about Greenfield Community College (GCC), Bridgewater 
+            State University (BSU), and Worcester State University (WSU). You do not have knowledge about and 
+            cannot answer questions about any other institutions. If something is not in your knowledge base, 
+            do not assume it does not exist. Simply inform the user you don't have knowledge of it.`,
             'KB_ID' : props.knowledgeBase.attrKnowledgeBaseId,
             'CONFL_PROMPT': `You are a knowledge expert looking to either identify conflicts among the 
             above documents or assure the user that no conflicts exist. You are not looking for small 
@@ -333,21 +368,11 @@ export class LambdaFunctionStack extends cdk.Stack {
     const blsDataTransformHandlerFunction = new lambda.Function(scope, 'BlsDataTransformHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
       code: lambda.Code.fromAsset(path.join(__dirname, 'bls-data-transform')), // Points to the lambda directory
-      //{
-      //  bundling: {
-      //    image: lambda.Runtime.PYTHON_3_12.bundlingImage,
-      //    command: [
-      //      'bash', '-c',
-      //      'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
-      //    ],
-      //  },
-      //}),
       handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
       environment: {
         "BUCKET" : props.knowledgeBucket.bucketName,        
       },
       timeout: cdk.Duration.seconds(300),
-      //layers: [props.layer]
     });
 
     blsDataTransformHandlerFunction.addToRolePolicy(new iam.PolicyStatement({

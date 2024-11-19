@@ -47,10 +47,7 @@ export const WELCOME_MESSAGE =
   "Hi! I’m your MATCH chatbot. What can I help you with?";
 
 export const WELCOME_TOPICS = [
-  "Course and program descriptions",
-  "Skills courses and programs teach",
-  "Comparing courses and programs",
-  "Career descriptions",
-  "Skills and tasks for careers",
-  "Career outlooks",
+  "What are careers in life sciences with a good outlook?",
+  "What skills are needed for a career in applied AI, and what courses at BSU teach those skills?",
+  "What courses at GCC will help me learn more about climate technology?",
 ];

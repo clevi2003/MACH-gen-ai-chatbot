@@ -60,7 +60,7 @@ import {
                 <Tabs
                   tabs={[
                       {
-                      label: "Getting Started",
+                      label: "Prompting Tips",
                       id: "getting-started",
                     //   content: (
                     //       <AboutTheToolTab
