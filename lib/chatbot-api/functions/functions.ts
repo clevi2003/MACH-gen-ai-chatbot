@@ -36,7 +36,6 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly blsDataTransformFunction : lambda.Function;
   public readonly ossUpdateIndexFunction : lambda.Function;
   public readonly kbSyncWrapperFunction : lambda.Function;
-  public readonly gccfunc : lambda.Function;
 
   constructor(scope: Construct, id: string, props: LambdaFunctionStackProps) {
     super(scope, id);
@@ -44,32 +43,6 @@ export class LambdaFunctionStack extends cdk.Stack {
     //const layer = new LambdaLayerStack(this, 'LambdaLayerStack');
     //this.layer = layer;
 
-    const gccAPIHandlerFunction = new lambda.Function(scope, 'GCCHandlerFunction', {
-      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
-      code: lambda.Code.fromAsset(path.join(__dirname, 'GCC-clean')),
-      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
-      environment: {
-        "BUCKET" : props.knowledgeBucket.bucketName
-      },
-      timeout: cdk.Duration.seconds(300)
-    });
-    // S3 bucket permissions
-    gccAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        's3:*'
-      ],
-      resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
-    }));
-    // texttract permissions
-    gccAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'textract:*'
-      ],
-      resources: ["*"]
-    }));
-    this.gccfunc = gccAPIHandlerFunction;
     
     const sessionAPIHandlerFunction = new lambda.Function(scope, 'SessionHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
