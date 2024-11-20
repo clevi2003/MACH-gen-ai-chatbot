@@ -6,7 +6,7 @@ import Playground from "./pages/chatbot/playground/playground";
 import SessionPage from "./pages/chatbot/sessions/sessions";
 import DataPage from "./pages/admin/data-view-page";
 import UserFeedbackPage from "./pages/admin/user-feedback-page";
-import LandingPage from "./pages/landing-page";
+import LandingPage from "./pages/landing-page/landing-page";
 import { v4 as uuidv4 } from "uuid";
 import "./styles/app.scss";
 
@@ -18,7 +18,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Landing Page */}
-          <Route path="/" element={<LandingPage u4={uuidv4} />} />
+          {/* <Route path="/" element={<LandingPage u4={uuidv4} />} /> */}
 
           {/* Grouped Routes with Global Header */}
           <Route

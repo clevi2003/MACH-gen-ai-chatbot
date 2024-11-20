@@ -18,7 +18,6 @@ import "./styles/app.scss";
 import AboutPage from "./pages/landing-page/about-page";
 import HowToUsePage from "./pages/landing-page/how-to-use-page";
 import SupportPage from "./pages/landing-page/support-page";
-import LandingPage from "./pages/landing-page";
 
 function App() {
   const appContext = useContext(AppContext); 
