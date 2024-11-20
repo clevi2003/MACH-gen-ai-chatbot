@@ -42,7 +42,8 @@ def add_evaluation(evaluation_id, evaluation_name, average_similarity,
             'average_correctness': Decimal(str(average_correctness)),
             'total_questions': total_questions,
             'evaluation_name': evaluation_name.strip() if evaluation_name else None,
-            'test_cases_key': test_cases_key
+            'test_cases_key': test_cases_key,
+            'PartitionKey': "Evaluation" 
         }
         print("summary_item: ", summary_item)
 

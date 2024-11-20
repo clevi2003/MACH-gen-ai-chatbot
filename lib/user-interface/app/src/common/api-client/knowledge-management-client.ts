@@ -11,10 +11,14 @@ export class KnowledgeManagementClient {
     this.API = _appConfig.httpEndpoint.slice(0,-1);
   }
   
-  // Returns a URL from the this.API that allows one file upload to S3 with that exact filename
-  async getUploadURL(fileName: string, fileType : string): Promise<string> {    
-    if (!fileType) {
-      alert('Must have valid file type!');
+  // Generalized method to get signed URLs for upload or download
+  async getSignedURL(
+    fileName: string,
+    operation: 'upload' | 'download',
+    fileType?: string
+  ): Promise<string> {
+    if (operation === 'upload' && !fileType) {
+      alert('Must have valid file type for upload!');
       return;
     }
 
@@ -24,13 +28,13 @@ export class KnowledgeManagementClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization' : auth
+          'Authorization': auth,
         },
-        body: JSON.stringify({ fileName, fileType })
+        body: JSON.stringify({ fileName, fileType, operation }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get upload URL');
+        throw new Error('Failed to get signed URL');
       }
 
       const data = await response.json();
@@ -39,6 +43,14 @@ export class KnowledgeManagementClient {
       console.error('Error:', error);
       throw error;
     }
+  }
+
+  async getUploadURL(fileName: string, fileType: string): Promise<string> {
+    return this.getSignedURL(fileName, 'upload', fileType);
+  }
+
+  async getDownloadURL(fileName: string): Promise<string> {
+    return this.getSignedURL(fileName, 'download');
   }
 
   // Returns a list of documents in the S3 bucket (hard-coded on the backend)
@@ -121,8 +133,9 @@ export class KnowledgeManagementClient {
   }
 
   // get's the current system prompt
-  async getCurrentSystemPrompt() : Promise<string> {
+  async getCurrentSystemPrompt() {
     const auth = await Utils.authenticate();
+    console.log("auth sys prompt: ", auth)
     const response = await fetch(this.API + '/system-prompts-handler', {
       method: 'POST',
       headers: {
@@ -133,6 +146,7 @@ export class KnowledgeManagementClient {
         "operation": "get_active_prompt"
       })
     })
+    console.log("response in the api: ", response)
     if (!response.ok) {
       throw new Error('Failed to get system prompt');
     }
@@ -140,7 +154,7 @@ export class KnowledgeManagementClient {
   }
 
   // Sets the system prompt by adding a new prompt into the ddb table
-  async setSystemPrompt(prompt: string) : Promise<string> {
+  async setSystemPrompt(prompt: string) {
     const auth = await Utils.authenticate();
     const response = await fetch(this.API + '/system-prompts-handler', {
       method: 'POST',
@@ -159,8 +173,28 @@ export class KnowledgeManagementClient {
     return await response.json()
   }
 
+  async stageSystemPrompt(prompt: string) {
+    const auth = await Utils.authenticate();
+    const response = await fetch(this.API + '/system-prompts-handler', {
+      method: 'POST',
+      headers: {
+      'Content-Type': 'application/json',
+      'Authorization' : auth
+      },
+      body: JSON.stringify({
+        "operation": "stage_prompt",
+        "prompt": prompt
+      })
+    })
+    console.log("response in the api: ", response)
+    if (!response.ok) {
+      throw new Error('Failed to stage system prompt');
+    }
+    return await response.json()
+  }
+
   // Returns a list of system prompts and the timestamp they were uploaded as the active prompt
-  async listSystemPrompts(continuationToken?: string, pageIndex?: number) : Promise<string> {
+  async listStagedSystemPrompts(continuationToken?: string, pageIndex?: number) {
     const auth = await Utils.authenticate();
     const response = await fetch(this.API + '/system-prompts-handler', {
       method: 'POST',
@@ -169,7 +203,7 @@ export class KnowledgeManagementClient {
       'Authorization' : auth
       },
       body: JSON.stringify({
-        "operation": "get_prompts",
+        "operation": "get_staged_prompts",
         continuationToken: continuationToken,
         pageIndex: pageIndex,
       })
@@ -179,6 +213,26 @@ export class KnowledgeManagementClient {
     }
     return await response.json()
   }
+
+  async listActiveSystemPrompts(continuationToken?: string, pageIndex?: number) {
+    const auth = await Utils.authenticate();
+    const response = await fetch(this.API + '/system-prompts-handler', {
+      method: 'POST',
+      headers: {
+      'Content-Type': 'application/json', 
+      'Authorization' : auth
+      },
+      body: JSON.stringify({
+        "operation": "get_active_prompts",
+        continuationToken: continuationToken,
+        pageIndex: pageIndex,
+      })
+    })
+    if (!response.ok) {
+      throw new Error('Failed to list system prompts');
+    }
+    return await response.json()
+  }
+
   
 }
- 

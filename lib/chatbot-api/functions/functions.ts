@@ -21,7 +21,8 @@ interface LambdaFunctionStackProps {
   readonly evalSummariesTable : Table;
   readonly evalResutlsTable : Table;
   readonly evalTestCasesBucket : s3.Bucket;
-  readonly systemPromptsTable : Table;
+  readonly stagedSystemPromptsTable : Table;
+  readonly activeSystemPromptsTable : Table;
 }
 
 export class LambdaFunctionStack extends cdk.Stack {  
@@ -34,8 +35,6 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly uploadS3KnowledgeFunction : lambda.Function;
   public readonly uploadS3TestCasesFunction : lambda.Function;
   public readonly syncKBFunction : lambda.Function;
-  //public readonly generateResponseFunction : lambda.Function;
-  //public readonly llmEvalFunction : lambda.Function;
   public readonly handleEvalResultsFunction : lambda.Function;
   public readonly stepFunctionsStack : StepFunctionsStack;
   public readonly systemPromptsFunction : lambda.Function;
@@ -73,8 +72,11 @@ export class LambdaFunctionStack extends cdk.Stack {
       code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/system-prompt-handler')), // Points to the lambda directory
       handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
       environment: {
-        "SYSTEM_PROMPTS_TABLE" : props.systemPromptsTable.tableName
-      }
+        "STAGED_SYSTEM_PROMPTS_TABLE" : props.stagedSystemPromptsTable.tableName, 
+        "ACTIVE_SYSTEM_PROMPTS_TABLE" : props.activeSystemPromptsTable.tableName,
+        "DEFAULT_PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
+        You have access to a search tool that you will use to look up answers to questions.`
+       }
     });
     // Add permissions to the lambda function to read/write to the table
     systemPromptsAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
@@ -87,10 +89,11 @@ export class LambdaFunctionStack extends cdk.Stack {
         'dynamodb:Query',
         'dynamodb:Scan'
       ],
-      resources: [props.systemPromptsTable.tableArn, props.systemPromptsTable.tableArn + "/index/*"]
+      resources: [props.activeSystemPromptsTable.tableArn, props.activeSystemPromptsTable.tableArn + "/index/*", props.stagedSystemPromptsTable.tableArn, props.stagedSystemPromptsTable.tableArn + "/index/*"]
     }));
     this.systemPromptsFunction = systemPromptsAPIHandlerFunction;
-    props.systemPromptsTable.grantReadWriteData(systemPromptsAPIHandlerFunction);
+    props.activeSystemPromptsTable.grantReadWriteData(systemPromptsAPIHandlerFunction);
+    props.stagedSystemPromptsTable.grantReadWriteData(systemPromptsAPIHandlerFunction);
 
         // Define the Lambda function resource
         const websocketAPIFunction = new lambda.Function(scope, 'ChatHandlerFunction', {
@@ -99,8 +102,8 @@ export class LambdaFunctionStack extends cdk.Stack {
           handler: 'index.handler', // Points to the 'hello' file in the lambda directory
           environment : {
             "WEBSOCKET_API_ENDPOINT" : props.wsApiEndpoint.replace("wss","https"),            
-            "PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
-            You have access to a search tool that you will use to look up answers to questions.`,
+            // "PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
+            // You have access to a search tool that you will use to look up answers to questions.`,
             'KB_ID' : props.knowledgeBase.attrKnowledgeBaseId,
             'SESSION_HANDLER' : sessionAPIHandlerFunction.functionName,
             'SYSTEM_PROMPTS_HANDLER' : systemPromptsAPIHandlerFunction.functionName

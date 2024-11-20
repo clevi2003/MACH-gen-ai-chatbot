@@ -185,6 +185,23 @@ const DETAILED_EVAL_COLUMN_DEFINITIONS = [
   },
 ];
 
+// should include the prompt itself with the option to show more
+const PromptColumnDefinitions = [
+  {
+    id: "prompt",
+    header: "Prompt",
+    cell: (item) => <TruncatedTextCell text={item.Prompt} maxLength={150}/>
+  },
+  {
+    id: "createdAt",
+    header: "Upload date",
+    cell: (item) =>
+      DateTime.fromISO(new Date(item.Timestamp).toISOString()).toLocaleString(
+        DateTime.DATETIME_SHORT
+      ),
+  },
+];
+
 /** This is exposed as a function because the code that this is based off of
  * originally supported many more distinct file types.
  */
@@ -198,6 +215,8 @@ export function getColumnDefinition(documentType: AdminDataType) {
       return EVAL_SUMMARY_COLUMN_DEFINITIONS;
     case "detailedEvaluation":
       return DETAILED_EVAL_COLUMN_DEFINITIONS;
+    case "prompt":
+      return PromptColumnDefinitions;
     default:
       return [];
   }

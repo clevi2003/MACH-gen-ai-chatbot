@@ -1,6 +1,7 @@
 import os
 import boto3
 from botocore.exceptions import ClientError
+from boto3.dynamodb.conditions import Key
 import json
 from datetime import datetime
 from decimal import Decimal
@@ -25,75 +26,37 @@ def convert_from_decimal(item):
         return float(item)  # Convert Decimal to float
     else:
         return item
-
-# # function to add a new evaluation (summary and detailed results) to DynamoDB
-# def add_evaluation(evaluation_id, evaluation_name, average_similarity,
-#                    average_relevance, average_correctness, total_questions, detailed_results, test_cases_key):
-#     try:
-#         timestamp = str(datetime.now())
-#         # eval id is len of summaries table
-#         # Add evaluation summary
-#         summary_item = {
-#             'EvaluationId': evaluation_id,
-#             'Timestamp': timestamp,
-#             'average_similarity': Decimal(str(average_similarity)),
-#             'average_relevance': Decimal(str(average_relevance)),
-#             'average_correctness': Decimal(str(average_correctness)),
-#             'total_questions': total_questions,
-#             'evaluation_name': evaluation_name.strip() if evaluation_name else None,
-#             'test_cases_key': test_cases_key
-#         }
-#         print("summary_item: ", summary_item)
-
-#         # Remove None values
-#         summary_item = {k: v for k, v in summary_item.items() if v is not None}
-
-#         summaries_table.put_item(Item=summary_item)
-
-#         # Add detailed results (batch write)
-#         with results_table.batch_writer() as batch:
-#             for idx, result in enumerate(detailed_results):
-#                 result_item = {
-#                     'EvaluationId': evaluation_id,
-#                     'QuestionId': str(idx),
-#                     'question': result['question'],
-#                     'expected_response': result['expectedResponse'],
-#                     'actual_response': result['actualResponse'],
-#                     'similarity': Decimal(str(result['similarity'])),
-#                     'relevance': Decimal(str(result['relevance'])),
-#                     'correctness': Decimal(str(result['correctness'])),
-#                     'test_cases_key': test_cases_key
-#                 }
-#                 print("result_item: ", result_item)
-#                 batch.put_item(Item=result_item)
-
-#         return {
-#             'statusCode': 200,
-#             'headers': {'Access-Control-Allow-Origin': '*'},
-#             'body': json.dumps({'message': 'Evaluation added successfully'})
-#         }
-#     except ClientError as error:
-#         print("Caught error: DynamoDB error - could not add evaluation")
-#         return {
-#             'statusCode': 500,
-#             'headers': {'Access-Control-Allow-Origin': '*'},
-#             'body': json.dumps(str(error))
-#         }
     
 # function to retrieve all summaries from DynamoDB
 def get_evaluation_summaries(continuation_token=None, limit=10):
     try: 
-        scan_params = {'Limit': limit}
+        query_params = {
+            "KeyConditionExpression": Key("PartitionKey").eq("Evaluation"),  # Match all evaluations
+            "ProjectionExpression": "#eid, #ts, #as, #ar, #ac, #tq, #en, #tk",
+            "ExpressionAttributeNames": {
+                "#eid": "EvaluationId",
+                "#ts": "Timestamp",  # Reserved keyword
+                "#as": "average_similarity",
+                "#ar": "average_relevance",
+                "#ac": "average_correctness",
+                "#tq": "total_questions",
+                "#en": "evaluation_name",
+                "#tk": "test_cases_key"
+            },
+            "Limit": limit,
+            "ScanIndexForward": False  # Get the most recent evaluations first
+        }
+        # Add continuation token if provided
         if continuation_token:
-            scan_params['ExclusiveStartKey'] = continuation_token
-        response = summaries_table.scan(**scan_params)
+            query_params["ExclusiveStartKey"] = continuation_token
+        response = summaries_table.query(**query_params)
         items = response.get('Items', [])
         last_evaluated_key = response.get('LastEvaluatedKey')
 
-        # Sort items by timestamp in descending order and build response
-        sorted_items = sorted(items, key=lambda x: x['Timestamp'], reverse=True)
+        # Sort items to return most recent evaluations first
+        #sorted_items = sorted(items, key=lambda x: x['Timestamp'], reverse=False)
         response_body = {
-            'Items': convert_from_decimal(sorted_items),
+            'Items': convert_from_decimal(items),
             'NextPageToken': last_evaluated_key
         }
 
@@ -104,6 +67,7 @@ def get_evaluation_summaries(continuation_token=None, limit=10):
         }
     except ClientError as error:
         print("Caught error: DynamoDB error - could not retrieve evaluation summaries")
+        print("error: ", error)
         return {
             'statusCode': 500,
             'headers': {'Access-Control-Allow-Origin': '*'},

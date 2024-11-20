@@ -17,6 +17,7 @@ export interface WebsiteProps {
 export class Website extends Construct {
     readonly distribution: cf.CloudFrontWebDistribution;
 
+
   constructor(scope: Construct, id: string, props: WebsiteProps) {
     super(scope, id);
 

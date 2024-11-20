@@ -166,6 +166,7 @@ def evaluate_with_ragas(question, expected_response, actual_response):
             "reference": [expected_response],
             "retrieved_contexts": [[expected_response]]
         }
+        
         data_samples = Dataset.from_dict(data_sample)
 
         # Load LLM and embeddings

@@ -7,7 +7,8 @@ export class TableStack extends Stack {
   public readonly feedbackTable : Table;
   public readonly evalResultsTable : Table;
   public readonly evalSummaryTable : Table;
-  public readonly systemPromptsTable : Table;
+  public readonly activeSystemPromptsTable : Table;
+  public readonly stagedSystemPromptsTable : Table;
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
@@ -50,14 +51,8 @@ export class TableStack extends Stack {
     this.feedbackTable = userFeedbackTable;    
 
     const evalSummariesTable = new Table(scope, 'EvaluationSummariesTable', {
-      partitionKey: { name: 'EvaluationId', type: AttributeType.STRING },
-    });
-    // add secondary index to sort EvaluationSummariesTable by Timestamp
-    evalSummariesTable.addGlobalSecondaryIndex({
-      indexName: 'TimestampIndex',
-      partitionKey: { name: 'EvaluationId', type: AttributeType.STRING },
+      partitionKey: { name: 'PartitionKey', type: AttributeType.STRING },
       sortKey: { name: 'Timestamp', type: AttributeType.STRING },
-      projectionType: ProjectionType.ALL,
     });
     this.evalSummaryTable = evalSummariesTable;
 
@@ -74,11 +69,17 @@ export class TableStack extends Stack {
     });
     this.evalResultsTable = evalResultsTable;
 
-    const systemPromptsTable = new Table(scope, 'SystemPromptsTable', {
-      partitionKey: { name: 'PromptId', type: AttributeType.STRING },
+    const activeSystemPromptsTable = new Table(scope, 'ActiveSystemPromptsTable', {
+      partitionKey: { name: 'PartitionKey', type: AttributeType.STRING },
       sortKey: { name: 'Timestamp', type: AttributeType.STRING }, 
     });
-    this.systemPromptsTable = systemPromptsTable;
+    this.activeSystemPromptsTable = activeSystemPromptsTable;
+
+    const stagedSystemPromptsTable = new Table(scope, 'StagedSystemPromptsTable', {
+      partitionKey: { name: 'PartitionKey', type: AttributeType.STRING },
+      sortKey: { name: 'Timestamp', type: AttributeType.STRING }, 
+    });
+    this.stagedSystemPromptsTable = stagedSystemPromptsTable;
 
   }
 }
