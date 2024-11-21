@@ -8,7 +8,7 @@ export class EvaluationsClient {
   }
 
   // Fetch evaluation summaries
-  async getEvaluationSummaries(continuationToken?: any, limit: number = 10) {
+  async getEvaluationSummaries(continuationToken?: any, limit: number = 10, testCaseFileName?: string) {
     const auth = await Utils.authenticate();
     console.log("auth eval: ", auth)
     const body: any = {
@@ -17,6 +17,9 @@ export class EvaluationsClient {
     };
     if (continuationToken) { 
       body.continuation_token = continuationToken;
+    }
+    if (testCaseFileName) {
+      body.test_case_file_name = testCaseFileName; // Include the test case filename
     }
 
     const response = await fetch(`${this.API}/eval-results-handler`, {
@@ -145,7 +148,6 @@ export class EvaluationsClient {
     if (!response.ok) {
       throw new Error('Failed to get files');
     }
-    console.log('response in the api', response);
     const result = await response.json();
     return result;
   }

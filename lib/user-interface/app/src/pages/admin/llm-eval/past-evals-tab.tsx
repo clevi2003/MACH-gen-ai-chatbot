@@ -7,6 +7,8 @@ import {
   Button,
   Header,
   StatusIndicator,
+  Select,
+  SelectProps,
 } from "@cloudscape-design/components";
 import { Utils } from "../../../common/utils";
 import { AppContext } from "../../../common/app-context";
@@ -36,7 +38,8 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [pages, setPages] = useState([]);
   const needsRefresh = useRef(false);
-
+  const [testCaseFiles, setTestCaseFiles] = useState<SelectProps.Option[]>([]);
+  const [selectedTestCaseFile, setSelectedTestCaseFile] = useState<SelectProps.Option | null>(null);
   const columnDefinitions = getColumnDefinition(props.documentType);
   const defaultSortingColumn = findFirstSortableColumn(columnDefinitions);
   const currentPageItems = pages[Math.min(pages.length - 1, currentPageIndex - 1)]?.Items || [];
@@ -58,7 +61,8 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
     async (params : { pageIndex?: number, nextPageToken? }) => {
       setLoading(true);
       try {
-        const result = await apiClient.evaluations.getEvaluationSummaries(params.nextPageToken);
+        const testCaseFileName = selectedTestCaseFile?.value;
+        const result = await apiClient.evaluations.getEvaluationSummaries(params.nextPageToken, 10, testCaseFileName);
         setPages((current) => {
           if (needsRefresh.current) {
             needsRefresh.current = false;
@@ -78,8 +82,27 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
         setLoading(false);
       }
     },
-    [apiClient, addNotification, needsRefresh]
+    [apiClient, addNotification, selectedTestCaseFile]
   );
+
+  useEffect(() => {
+    const fetchTestCaseFiles = async () => {
+      try {
+        const result = await apiClient.evaluations.getDocuments();
+        const options = result.Contents.map((file) => ({
+          label: file.Key,
+          value: file.Key,
+        }));
+        setTestCaseFiles(options);
+      } catch (error) {
+        console.error("Error fetching test case files:", error);
+        addNotification("error", "Error fetching test case files");
+      }
+    };
+  
+    fetchTestCaseFiles();
+  }, [apiClient, addNotification]);
+  
 
   useEffect(() => {
     setCurrentPageIndex(1);
@@ -88,7 +111,8 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
     } else {
       getEvaluations({ pageIndex: currentPageIndex });
     }
-  }, [getEvaluations]);
+  }, [getEvaluations, selectedTestCaseFile]);
+  
 
   const onNextPageClick = async () => {
     const continuationToken = pages[currentPageIndex - 1]?.NextPageToken;
@@ -123,6 +147,12 @@ export default function PastEvalsTab(props: PastEvalsTabProps) {
         <Header
           actions={
             <SpaceBetween direction="horizontal" size="xs">
+              <Select
+                placeholder="Filter by test case file"
+                selectedOption={selectedTestCaseFile}
+                onChange={({ detail }) => setSelectedTestCaseFile(detail.selectedOption)}
+                options={testCaseFiles}
+              />
               <Button iconName="refresh" onClick={() => getEvaluations({ pageIndex: currentPageIndex })} />
             </SpaceBetween>
           }

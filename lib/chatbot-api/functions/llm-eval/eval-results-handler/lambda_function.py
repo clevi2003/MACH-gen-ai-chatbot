@@ -28,7 +28,7 @@ def convert_from_decimal(item):
         return item
     
 # function to retrieve all summaries from DynamoDB
-def get_evaluation_summaries(continuation_token=None, limit=10):
+def get_evaluation_summaries(continuation_token=None, limit=10, test_case_file_name=None):
     try: 
         query_params = {
             "KeyConditionExpression": Key("PartitionKey").eq("Evaluation"),  # Match all evaluations
@@ -46,17 +46,26 @@ def get_evaluation_summaries(continuation_token=None, limit=10):
             "Limit": limit,
             "ScanIndexForward": False  # Get the most recent evaluations first
         }
+
         # Add continuation token if provided
         if continuation_token:
             query_params["ExclusiveStartKey"] = continuation_token
+
+        # If test_case_file_name is provided, add a FilterExpression
+        if test_case_file_name:
+            query_params["FilterExpression"] = Key("test_cases_key").eq(test_case_file_name)
+
+        # Query the DynamoDB table
         response = summaries_table.query(**query_params)
         items = response.get('Items', [])
         last_evaluated_key = response.get('LastEvaluatedKey')
 
-        # Sort items to return most recent evaluations first
-        #sorted_items = sorted(items, key=lambda x: x['Timestamp'], reverse=False)
+        # Convert Decimal types to floats
+        items = convert_from_decimal(items)
+
+        # Build the response body
         response_body = {
-            'Items': convert_from_decimal(items),
+            'Items': items,
             'NextPageToken': last_evaluated_key
         }
 
@@ -114,35 +123,12 @@ def lambda_handler(event, context):
     data = json.loads(event['body']) if 'body' in event else event
     operation = data.get('operation')
     evaluation_id = data.get('evaluation_id')
-    # evaluation_name = data.get('evaluation_name', f"Evaluation on {str(datetime.now())}")
-    # average_similarity = data.get('average_similarity')
-    # average_relevance = data.get('average_relevance')
-    # average_correctness = data.get('average_correctness')
-    # detailed_results = data.get('detailed_results', [])
-    # total_questions = data.get('total_questions', len(detailed_results))
-    # test_cases_key = data.get('test_cases_key')
     continuation_token = data.get('continuation_token')
     limit = data.get('limit', 10)
+    test_case_file_name = data.get('test_case_file_name')
 
-    # if operation == 'add_evaluation':
-    #     if not all([average_similarity, average_relevance, average_correctness, total_questions, detailed_results, test_cases_key]):
-    #         return {
-    #             'statusCode': 400,
-    #             'headers': {'Access-Control-Allow-Origin': '*'},
-    #             'body': json.dumps('Missing required parameters for adding evaluation.')
-    #         }
-    #     return add_evaluation(
-    #         evaluation_id,
-    #         evaluation_name,
-    #         average_similarity,
-    #         average_relevance,
-    #         average_correctness,
-    #         total_questions,
-    #         detailed_results, 
-    #         test_cases_key
-    #     )
     if operation == 'get_evaluation_summaries':
-        return get_evaluation_summaries(continuation_token, limit)
+        return get_evaluation_summaries(continuation_token, limit, test_case_file_name)
     elif operation == 'get_evaluation_results':
         if not evaluation_id:
             return {

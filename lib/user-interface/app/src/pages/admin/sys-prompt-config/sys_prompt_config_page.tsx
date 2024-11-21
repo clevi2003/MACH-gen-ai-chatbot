@@ -20,7 +20,7 @@ import {
   export default function ConfigurationPage() {
     const onFollow = useOnFollow();
     const [admin, setAdmin] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState("current-eval");
+    const [activeTab, setActiveTab] = useState("add-prompt");
     //const appContext = useContext(AppContext);
   
   

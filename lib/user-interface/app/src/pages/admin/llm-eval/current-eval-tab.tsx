@@ -7,6 +7,8 @@ import {
   Grid,
   LineChart,
   Header,
+  Select,
+  SelectProps,
 } from "@cloudscape-design/components";
 import { Auth } from "aws-amplify";
 import { Utils } from "../../../common/utils";
@@ -32,6 +34,9 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
   const needsRefresh = useRef(false);
   const [pages, setPages] = useState([]);
   const [activePrompts, setActivePrompts] = useState([]);
+  const [testCaseFiles, setTestCaseFiles] = useState<SelectProps.Option[]>([]);
+  const [selectedTestCaseFile, setSelectedTestCaseFile] = useState<SelectProps.Option | null>(null);
+
 
   const { items, collectionProps, paginationProps } = useCollection(evaluations, {
     pagination: { pageSize: 10 },
@@ -49,10 +54,10 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
   const getEvaluations = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await apiClient.evaluations.getEvaluationSummaries();
+      const testCaseFileName = selectedTestCaseFile?.value;
+      const result = await apiClient.evaluations.getEvaluationSummaries(undefined, 10, testCaseFileName);
       // Take only the last 10 evaluations
       const firstTenEvaluations = result.Items.slice(0, 10);
-      // Update state with just these evaluations
       setEvaluations(firstTenEvaluations);
     } catch (error) {
       console.error(Utils.getErrorMessage(error));
@@ -60,7 +65,7 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
     } finally {
       setLoading(false);
     }
-  }, [apiClient, addNotification]);
+  }, [apiClient, addNotification, selectedTestCaseFile]);
 
   // Fetch Active Prompts
   const getActivePrompts = useCallback(async () => {
@@ -86,8 +91,7 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
 
   useEffect(() => {
     getEvaluations();
-    getActivePrompts();
-  }, [getEvaluations, getActivePrompts]);
+  }, [getEvaluations, getActivePrompts, selectedTestCaseFile]);
 
   useEffect(() => {
     (async () => {
@@ -111,6 +115,26 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    const fetchTestCaseFiles = async () => {
+      try {
+        const result = await apiClient.evaluations.getDocuments();
+        // Assuming result.Contents is an array of file metadata
+        const options = result.Contents.map((file) => ({
+          label: file.Key,
+          value: file.Key,
+        }));
+        setTestCaseFiles(options);
+      } catch (error) {
+        console.error("Error fetching test case files:", error);
+        addNotification("error", "Error fetching test case files");
+      }
+    };
+  
+    fetchTestCaseFiles();
+  }, [apiClient, addNotification]);
+  
 
   if (!admin) {
     return (
@@ -246,6 +270,12 @@ export default function CurrentEvalTab(props: CurrentEvalTabProps) {
 
       {/* Combined Line Chart for All Metrics */}
       <Container header={<Header variant="h3">Metrics Over Time (10 Most Recent Evaluations)</Header>}>
+        <Select
+          placeholder="Select a test case file"
+          selectedOption={selectedTestCaseFile}
+          onChange={({ detail }) => setSelectedTestCaseFile(detail.selectedOption)}
+          options={testCaseFiles}
+        />
         <LineChart
           series={allSeries}
         //   xDomain={[xMin, xMax]}
