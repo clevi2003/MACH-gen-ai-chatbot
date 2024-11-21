@@ -44,7 +44,7 @@ export const feedbackTypes = [
 export const CHATBOT_NAME = "Massachusetts Academics to Careers Helper (MATCH)";
 
 export const WELCOME_MESSAGE =
-  "Hi! I’m your MATCH chatbot. What can I help you with?";
+  "Hi! I’m your Massachusetts Academics to Careers Helper. What can I help you with?";
 
 export const WELCOME_TOPICS = [
   "What are careers in life sciences with a good outlook?",

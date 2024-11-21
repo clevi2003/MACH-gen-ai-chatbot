@@ -10,6 +10,7 @@ import LandingPage from "./pages/landing-page";
 import LandingPageInfo from "./pages/landing-page-info";
 import LandingPageStart from "./pages/landing-page-start";
 import TipsAndQuestions from "./pages/tips-and-questions";
+import LanguageList from "./pages/languages";
 import { v4 as uuidv4 } from "uuid";
 import AboutChatbot from "./pages/help/about-chatbot";
 import Support from "./pages/help/support";
@@ -43,6 +44,7 @@ function App() {
               <Route path="playground/:sessionId" element={<Playground />} />
               <Route path="sessions" element={<SessionPage />} />
               <Route path="tips" element={<TipsAndQuestions />} />
+              <Route path="languages" element={<LanguageList />} />
             </Route>
 
             {/* Admin Routes */}

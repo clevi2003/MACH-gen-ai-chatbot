@@ -138,15 +138,15 @@ import {
             >
               <SpaceBetween size="l">
                 <Container
-                  header={
-                    <div style={{marginBottom: "-10px"}}>
-                        <Header
-                        variant="h3"
-                        >
-                        About this page:
-                        </Header> 
-                    </div>               
-                  }
+                  // header={
+                  //   <div style={{marginBottom: "-10px"}}>
+                  //       <Header
+                  //       variant="h3"
+                  //       >
+                  //       About this page:
+                  //       </Header> 
+                  //   </div>               
+                  // }
                 >
                   <SpaceBetween size="xxs">
                   <div style={{ lineHeight: "1.6" }}>

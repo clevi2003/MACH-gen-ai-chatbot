@@ -82,17 +82,18 @@ const SkipButton = styled.div`
 `;
 
 const TextContainer = styled.div`
-    font-size: 90px;
+    font-size: 60px;
     font-weight: 700;
     color: rgb(240, 240, 240);
-    padding-bottom: 0px;
+    padding-bottom: 100px;
+    text-align: center;
     animation: ${fadeIn} 0.75s ease-in-out;
     z-index: 2;
 `;
 
 const SmallTextContainer = styled.div`
     font-size: 30px;
-    font-weight: 600;
+    font-weight: 500;
     color: rgb(240, 240, 240);
     margin-top: -2px;
     margin-bottom: 50px;
@@ -135,9 +136,9 @@ const LandingPage = () => {
     return (
         <PageContainer>
             <HeaderBar>
-                <SkipButton onClick={handleSkipButtonClick}>Skip to Chat {'>'}</SkipButton>
+                <SkipButton onClick={handleSkipButtonClick}>Skip to Chat {'>>'}</SkipButton>
             </HeaderBar>
-            <TextContainer>Welcome to Massachusetts Academics to Careers Helper (MATCH)</TextContainer>
+            <TextContainer>Welcome to the Massachusetts <br/>Academics to Careers Helper (MATCH)</TextContainer>
             <SmallTextContainer onClick={handleNextButtonClick}>Let's learn more about what I can do for you →</SmallTextContainer>
             <Circle className="darkBlue" />
             <Circle className="lightBlue" />

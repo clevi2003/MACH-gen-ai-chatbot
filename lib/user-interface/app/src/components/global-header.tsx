@@ -58,6 +58,7 @@ export default function GlobalHeader() {
         identity={{
           href: "/",
           logo: { src: "/images/stateseal-color.png", alt:  CHATBOT_NAME  + " Logo" },
+          title: CHATBOT_NAME, // Add this line to display the chatbot's name
         }}
         utilities={[          
           {
