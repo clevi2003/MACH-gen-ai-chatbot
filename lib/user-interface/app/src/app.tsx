@@ -6,8 +6,14 @@ import Playground from "./pages/chatbot/playground/playground";
 import SessionPage from "./pages/chatbot/sessions/sessions";
 import DataPage from "./pages/admin/data-view-page";
 import UserFeedbackPage from "./pages/admin/user-feedback-page";
-import LandingPage from "./pages/landing-page/landing-page";
+import LandingPage from "./pages/landing-page";
+import LandingPageInfo from "./pages/landing-page-info";
+import LandingPageStart from "./pages/landing-page-start";
+import TipsAndQuestions from "./pages/tips-and-questions";
 import { v4 as uuidv4 } from "uuid";
+import AboutChatbot from "./pages/help/about-chatbot";
+import Support from "./pages/help/support";
+import HowToUse from "./pages/help/how-to-use";
 import "./styles/app.scss";
 
 function App() {
@@ -18,7 +24,9 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Landing Page */}
-          {/* <Route path="/" element={<LandingPage u4={uuidv4} />} /> */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/about" element={<LandingPageInfo />} />
+          <Route path="/get-started" element={<LandingPageStart />} />
 
           {/* Grouped Routes with Global Header */}
           <Route
@@ -34,15 +42,22 @@ function App() {
             <Route path="/chatbot">
               <Route path="playground/:sessionId" element={<Playground />} />
               <Route path="sessions" element={<SessionPage />} />
+              <Route path="tips" element={<TipsAndQuestions />} />
             </Route>
 
             {/* Admin Routes */}
             <Route path="/admin">
               <Route path="data" element={<DataPage />} />
               <Route path="user-feedback" element={<UserFeedbackPage />} />
+              {/* <Route path="user-feedback/:feedbackId" element={<UserFeedbackDetailPage />} /> */}
             </Route>
 
-            
+            {/* FAQ and Guide Routes */}
+            <Route path="/faq-and-guide">
+              <Route path="about-chatbot" element={<AboutChatbot />} />
+              <Route path="how-to-use" element={<HowToUse />} />
+              <Route path="support" element={<Support />} />
+            </Route>
           </Route>
 
           {/* Catch-all Route */}

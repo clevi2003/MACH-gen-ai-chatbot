@@ -19,6 +19,8 @@
     "@fortawesome/fontawesome-svg-core": "^6.4.2",
     "@fortawesome/free-solid-svg-icons": "^6.4.2",
     "@fortawesome/react-fontawesome": "^0.2.0",
+    "@mui/icons-material": "^6.1.8",
+    "@types/styled-components": "^5.1.34",
     "aws-amplify": "^5.3.12",
     "luxon": "^3.4.3",
     "react": "^18.2.0",
@@ -31,6 +33,7 @@
     "react-use-websocket": "^4.5.0",
     "regenerator-runtime": "^0.14.0",
     "remark-gfm": "^4.0.0",
+    "styled-components": "^6.1.13",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

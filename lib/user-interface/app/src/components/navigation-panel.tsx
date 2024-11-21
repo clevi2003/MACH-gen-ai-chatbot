@@ -86,15 +86,6 @@ export default function NavigationPanel() {
       // add Home section with links for about, how to use, and support
       {
         type: "section",
-        text: "Home",
-        items: [
-          { type: "link", text: "About the MATCH Chatbot", href: "/home/about" },
-          { type: "link", text: "How to Use", href: "home/how-to-use" },
-          { type: "link", text: "Support", href: "home/support" },
-        ],
-      },
-      {
-        type: "section",
         text: "Session History",
         items: sessions.map(session => ({
           type: "link",
