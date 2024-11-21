@@ -16,7 +16,7 @@ import { ApiClient } from "../../../common/api-client/api-client";
 import { Utils } from "../../../common/utils";
 import { FileUploader } from "../../../common/file-uploader";
 import { useNavigate } from "react-router-dom";
-// import { saveAs } from 'file-saver';
+import { saveAs } from 'file-saver';
 import { useNotifications } from "../../../components/notif-manager";
 
 
@@ -151,29 +151,29 @@ export default function DataFileUpload(props: FileUploadTabProps) {
     typeof props.selectedWorkspace !== "undefined" &&
     props.selectedWorkspace.status === "ready";*/
 
-    // const handleDownload = async () => {    
-    //   setLoading(true);
-    //   try {
-    //     // download testCaseTemplate.csv
-    //     const fileName = 'testCaseTemplate.csv';
-    //     const downloadUrl = await apiClient.evaluations.getDownloadURL(fileName);
+    const handleDownload = async () => {    
+      setLoading(true);
+      try {
+        // download testCaseTemplate.csv
+        const fileName = 'testCaseTemplate.csv';
+        const downloadUrl = await apiClient.evaluations.getDownloadURL(fileName);
 
-    //     // Fetch the file data
-    //     const response = await fetch(downloadUrl);
-    //     if (!response.ok) {
-    //       throw new Error(`Failed to download file: ${fileName}`);
-    //     }
-    //     const blob = await response.blob();
+        // Fetch the file data
+        const response = await fetch(downloadUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to download file: ${fileName}`);
+        }
+        const blob = await response.blob();
 
-    //     saveAs(blob, fileName.substring(fileName.lastIndexOf('/') + 1));
-    //     addNotification('success', 'Files downloaded successfully');
-    //   } catch (error) {
-    //     console.error('Error downloading files:', error);
-    //     addNotification('error', 'Error downloading files');
-    //   } finally {
-    //     setLoading(false);
-    //   }
-    // };
+        saveAs(blob, fileName.substring(fileName.lastIndexOf('/') + 1));
+        addNotification('success', 'Files downloaded successfully');
+      } catch (error) {
+        console.error('Error downloading files:', error);
+        addNotification('error', 'Error downloading files');
+      } finally {
+        setLoading(false);
+      }
+    };
 
   return (
     <Form
@@ -185,7 +185,6 @@ export default function DataFileUpload(props: FileUploadTabProps) {
             disabled={
               filesToUpload.length === 0 ||
               uploadingStatus === "in-progress"
-              // !hasReadyWorkspace
             }
             onClick={onUpload}
           >
@@ -199,7 +198,7 @@ export default function DataFileUpload(props: FileUploadTabProps) {
       <Container header={<h3>Test Case File Format Requirements</h3>}>
         <Button 
         variant="normal" 
-        onClick={() => {}}
+        onClick={handleDownload}
         >
           Download Template Test Case File
         </Button>

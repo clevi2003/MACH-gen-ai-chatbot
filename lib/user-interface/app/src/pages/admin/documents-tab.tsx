@@ -16,7 +16,7 @@ import { getColumnDefinition } from "./columns";
 import { Utils } from "../../common/utils";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useNotifications } from "../../components/notif-manager";
-// import { saveAs } from 'file-saver';
+import { saveAs } from 'file-saver';
 
 export interface DocumentsTabProps {
   tabChangeFunction: () => void;
@@ -241,37 +241,37 @@ export default function DocumentsTab(props: DocumentsTabProps) {
     }
   }
 
-  // const handleDownload = async () => {
-  //   if (selectedItems.length === 0) return;
+  const handleDownload = async () => {
+    if (selectedItems.length === 0) return;
 
-  //   setLoading(true);
-  //   try {
-  //     // For each selected item, get the download URL and initiate download
-  //     await Promise.all(
-  //       selectedItems.map(async (item) => {
-  //         const fileName = item.Key;
-  //         const downloadUrl = await apiClient.knowledgeManagement.getDownloadURL(fileName);
+    setLoading(true);
+    try {
+      // For each selected item, get the download URL and initiate download
+      await Promise.all(
+        selectedItems.map(async (item) => {
+          const fileName = item.Key;
+          const downloadUrl = await apiClient.knowledgeManagement.getDownloadURL(fileName);
 
-  //         // Fetch the file data
-  //         const response = await fetch(downloadUrl);
-  //         if (!response.ok) {
-  //           throw new Error(`Failed to download file: ${fileName}`);
-  //         }
-  //         const blob = await response.blob();
+          // Fetch the file data
+          const response = await fetch(downloadUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to download file: ${fileName}`);
+          }
+          const blob = await response.blob();
 
-  //         // Use FileSaver.js to save the file
-  //         saveAs(blob, fileName.substring(fileName.lastIndexOf('/') + 1));
-  //       })
-  //     );
+          // Use FileSaver.js to save the file
+          saveAs(blob, fileName.substring(fileName.lastIndexOf('/') + 1));
+        })
+      );
 
-  //     addNotification('success', 'Files downloaded successfully');
-  //   } catch (error) {
-  //     console.error('Error downloading files:', error);
-  //     addNotification('error', 'Error downloading files');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+      addNotification('success', 'Files downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading files:', error);
+      addNotification('error', 'Error downloading files');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <><Modal
@@ -328,28 +328,12 @@ export default function DocumentsTab(props: DocumentsTabProps) {
                   }}
                   data-testid="submit"
                 >
-                  Delete Two
-                </Button>
-                <Button
-                  variant="normal"
-                  onClick={() => {}}
-                >
-                  Test Button
-                </Button>
-                <Button
-                  variant="normal"
-                  disabled={selectedItems.length === 0}
-                  onClick={() => {
-                    if (selectedItems.length > 0) setShowModalDelete(true);
-                  }}
-                  data-testid="submit"
-                >
                   Delete
                 </Button>
                 <Button
                   variant="normal"
                   disabled={selectedItems.length === 0}
-                  onClick={() => {}}
+                  onClick={handleDownload}
                 >
                   Download 
                 </Button>
