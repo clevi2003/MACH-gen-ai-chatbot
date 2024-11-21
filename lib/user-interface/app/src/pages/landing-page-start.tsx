@@ -76,8 +76,8 @@ const SkipButton = styled.div`
 `;
 
 const TextContainer = styled.span`
-    font-size: 38px;
-    font-weight: 700;
+    font-size: 30px;
+    font-weight: 500;
     color: rgb(240, 240, 240);
     animation: ${fadeIn} 0.75s ease-in-out;
     z-index: 2;
@@ -85,8 +85,21 @@ const TextContainer = styled.span`
     padding: 0 90px;
     box-sizing: border-box;
     line-height: 1.6;
-    margin-bottom: 5px;
 `;
+const TextContainer2 = styled.span`
+    font-size: 30px;
+    font-weight: 700;
+    color: rgb(240, 240, 240);
+    animation: ${fadeIn} 5s ease-in-out;
+    z-index: 2;
+    text-align: center;
+    padding: 0 90px;
+    box-sizing: border-box;
+    line-height: 1.6;
+    margin-top: 100px;
+   
+`;
+
 
 const ArrowContainer = styled.span`
     font-size: 38px;
@@ -117,6 +130,10 @@ const LandingPageInfo = () => {
         navigate(`/get-started`); 
     };
 
+    const handleNextButtonClick2 = () => {
+        navigate(`/chatbot/playground/${uuidv4()}`);
+    };
+
     const handleBackButtonClick = () => {
         navigate(`/`); 
     };
@@ -140,12 +157,15 @@ const LandingPageInfo = () => {
     return (
         <PageContainer>
             <HeaderBar>
-                <SkipButton onClick={handleSkipButtonClick}>Skip to Chat {'>'}</SkipButton>
+                <SkipButton onClick={handleSkipButtonClick}>Skip to Chat {'>>'}</SkipButton>
             </HeaderBar>
             <TextContainer>
-            I can help you research course, program, and career <br/>information in Massachusetts
-            <ArrowContainer onClick={handleNextButtonClick}>→</ArrowContainer>
+            The more specific your questions are, the better I can try to help you!
             </TextContainer>
+            <TextContainer2>
+            Ready to start?
+            <ArrowContainer onClick={handleNextButtonClick2}>→</ArrowContainer>
+            </TextContainer2>
             <Circle className="darkBlue" />
             <Circle className="lightBlue" />
         </PageContainer>

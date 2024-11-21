@@ -108,7 +108,7 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
               }
             }}
             value={state.value}
-            placeholder={"Send a message"}
+            placeholder={"Type your message here in your preferred language…"}
           />
           <div style={{ marginLeft: "8px" }}>
             <Button

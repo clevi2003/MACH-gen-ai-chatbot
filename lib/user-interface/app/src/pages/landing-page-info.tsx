@@ -76,21 +76,21 @@ const SkipButton = styled.div`
 `;
 
 const TextContainer = styled.span`
-    font-size: 38px;
-    font-weight: 700;
+    font-size: 30px;
+    font-weight: 500;
     color: rgb(240, 240, 240);
     animation: ${fadeIn} 0.75s ease-in-out;
     z-index: 2;
     text-align: center;
-    padding: 0 90px;
+    padding: 0 160px;
     box-sizing: border-box;
-    line-height: 1.6;
-    margin-bottom: 5px;
+    line-height: 1.75;
+    margin-bottom: 50px;
 `;
 
 const ArrowContainer = styled.span`
-    font-size: 38px;
-    font-weight: 700;
+    font-size: 30px;
+    font-weight: 500;
     color: rgb(240, 240, 240);
     margin-bottom: 0px;
     animation: ${fadeIn} 0.75s ease-in-out;
@@ -140,10 +140,10 @@ const LandingPageInfo = () => {
     return (
         <PageContainer>
             <HeaderBar>
-                <SkipButton onClick={handleSkipButtonClick}>Skip to Chat {'>'}</SkipButton>
+                <SkipButton onClick={handleSkipButtonClick}>Skip to Chat {'>>'}</SkipButton>
             </HeaderBar>
             <TextContainer>
-            I can help you research course, program, and career <br/>information in Massachusetts
+            I can help you explore courses and programs at Massachusetts public colleges, offer personalized career guidance, mapping, and support—all in the language you're most comfortable using.
             <ArrowContainer onClick={handleNextButtonClick}>→</ArrowContainer>
             </TextContainer>
             <Circle className="darkBlue" />
