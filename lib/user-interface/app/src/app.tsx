@@ -6,16 +6,21 @@ import Playground from "./pages/chatbot/playground/playground";
 import SessionPage from "./pages/chatbot/sessions/sessions";
 import DataPage from "./pages/admin/data-view-page";
 import UserFeedbackPage from "./pages/admin/user-feedback-page";
-import LandingPage from "./pages/landing-page";
-import LandingPageInfo from "./pages/landing-page-info";
-import LandingPageStart from "./pages/landing-page-start";
-import TipsAndQuestions from "./pages/tips-and-questions";
-import LanguageList from "./pages/languages";
 import { v4 as uuidv4 } from "uuid";
 import AboutChatbot from "./pages/help/about-chatbot";
 import Support from "./pages/help/support";
 import HowToUse from "./pages/help/how-to-use";
 import "./styles/app.scss";
+import AboutChatbot from "./pages/help/about-chatbot";
+import Support from "./pages/help/support";
+import HowToUse from "./pages/help/how-to-use";
+import LandingPage from "./pages/landing-page";
+import LandingPageInfo from "./pages/landing-page-info";
+import LandingPageStart from "./pages/landing-page-start";
+import TipsAndQuestions from "./pages/tips-and-questions";
+import LanguageList from "./pages/languages";
+import LlmEvaluationPage from "./pages/admin/llm-eval/llm-evaluation-page"; 
+import DetailedEvaluationPage from "./pages/admin/llm-eval/detailed-evaluation-page";import ConfigurationPage from "./pages/admin/sys-prompt-config/sys_prompt_config_page";
 
 function App() {
   const appContext = useContext(AppContext);
@@ -51,7 +56,15 @@ function App() {
             <Route path="/admin">
               <Route path="data" element={<DataPage />} />
               <Route path="user-feedback" element={<UserFeedbackPage />} />
-              {/* <Route path="user-feedback/:feedbackId" element={<UserFeedbackDetailPage />} /> */}
+              <Route path="configuration" element={<ConfigurationPage />} />
+              <Route path="llm-evaluation" element={<LlmEvaluationPage />}>
+                <Route
+                  path=":evaluationId"
+                  element={
+                    <DetailedEvaluationPage documentType="detailedEvaluation" />
+                  }
+                />
+              </Route>
             </Route>
 
             {/* FAQ and Guide Routes */}

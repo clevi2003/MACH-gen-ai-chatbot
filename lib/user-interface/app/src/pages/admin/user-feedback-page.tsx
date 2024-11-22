@@ -41,7 +41,7 @@ export default function UserFeedbackPage() {
         if (admin) {
           const data = JSON.parse(admin);
           // only master admin can view feedback
-          if (data.includes("MasterAdmin")) {
+          if (data.includes("Admin")) {
             setAdmin(true);
           } 
         }

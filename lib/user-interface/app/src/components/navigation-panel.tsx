@@ -83,7 +83,6 @@ export default function NavigationPanel() {
 
   const updateItems = async (sessions) => {
     let newItems: SideNavigationProps.Item[] = [
-      // add Home section with links for about, how to use, and support
       {
         type: "section",
         text: "Session History",
@@ -107,24 +106,16 @@ export default function NavigationPanel() {
       const admin = result?.signInUserSession?.idToken?.payload["custom:role"]
       if (admin) {
         const data = JSON.parse(admin);
-        if (data.includes("MasterAdmin")) {
+        if (data.includes("Admin")) {
           console.log("master admin found!")
           newItems.push({
             type: "section",
             text: "Admin",
             items: [
               { type: "link", text: "Data", href: "/admin/data" },
-              { type: "link", text: "User Feedback", href: "/admin/user-feedback" }
-            ],
-          },)
-        }
-        else if (data.includes("Admin")) {
-          console.log("admin found!")
-          newItems.push({
-            type: "section",
-            text: "Admin",
-            items: [
-              { type: "link", text: "Data", href: "/admin/data" },
+              { type: "link", text: "User Feedback", href: "/admin/user-feedback" },
+              { type: "link", text: "LLM Evaluation", href: "/admin/llm-evaluation" },
+              { type: "link", text: "System Prompt Configuration", href: "/admin/configuration" }
             ],
           },)
         }

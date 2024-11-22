@@ -2,6 +2,7 @@ import { AppConfig } from "../types";
 import { SessionsClient } from "./sessions-client";
 import { KnowledgeManagementClient } from "./knowledge-management-client";
 import { UserFeedbackClient } from "./user-feedback-client";
+import { EvaluationsClient } from "./evaluations-client";
 
 export class ApiClient {
 
@@ -9,6 +10,7 @@ export class ApiClient {
 
   private _knowledgeManagementClient : KnowledgeManagementClient | undefined;
   private _userFeedbackClient: UserFeedbackClient | undefined;
+  private _evaluationsClient: EvaluationsClient | undefined;
 
  
 
@@ -38,6 +40,15 @@ export class ApiClient {
     }
 
     return this._userFeedbackClient;
+  }
+
+  /** Construct the Evaluations sub-client */
+  public get evaluations() {
+    if (!this._evaluationsClient) {
+      this._evaluationsClient = new EvaluationsClient(this._appConfig);
+    }
+
+    return this._evaluationsClient;
   }
 
   constructor(protected _appConfig: AppConfig) {}

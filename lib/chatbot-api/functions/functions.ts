@@ -13,6 +13,8 @@ import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3_notifications from "aws-cdk-lib/aws-s3-notifications";
 import * as bedrock from "aws-cdk-lib/aws-bedrock";
+import { StepFunctionsStack } from './step-functions/step-functions';
+
 
 interface LambdaFunctionStackProps {  
   readonly wsApiEndpoint : string;  
@@ -22,6 +24,11 @@ interface LambdaFunctionStackProps {
   readonly knowledgeBucket : s3.Bucket;
   readonly knowledgeBase : bedrock.CfnKnowledgeBase;
   readonly knowledgeBaseSource: bedrock.CfnDataSource;
+  readonly evalSummariesTable : Table;
+  readonly evalResutlsTable : Table;
+  readonly evalTestCasesBucket : s3.Bucket;
+  readonly stagedSystemPromptsTable : Table;
+  readonly activeSystemPromptsTable : Table;
 }
 
 export class LambdaFunctionStack extends cdk.Stack {  
@@ -29,20 +36,20 @@ export class LambdaFunctionStack extends cdk.Stack {
   public readonly sessionFunction : lambda.Function;
   public readonly feedbackFunction : lambda.Function;
   public readonly deleteS3Function : lambda.Function;
-  public readonly getS3Function : lambda.Function;
-  public readonly uploadS3Function : lambda.Function;
+  public readonly getS3KnowledgeFunction : lambda.Function;
+  public readonly getS3TestCasesFunction : lambda.Function;
+  public readonly uploadS3KnowledgeFunction : lambda.Function;
+  public readonly uploadS3TestCasesFunction : lambda.Function;
   public readonly syncKBFunction : lambda.Function;
+  public readonly kbSyncWrapperFunction : lambda.Function;
   public readonly onetDataPullFunction : lambda.Function;
   public readonly blsDataTransformFunction : lambda.Function;
-  public readonly ossUpdateIndexFunction : lambda.Function;
-  public readonly kbSyncWrapperFunction : lambda.Function;
+  public readonly handleEvalResultsFunction : lambda.Function;
+  public readonly stepFunctionsStack : StepFunctionsStack;
+  public readonly systemPromptsFunction : lambda.Function;
 
   constructor(scope: Construct, id: string, props: LambdaFunctionStackProps) {
     super(scope, id);
-    
-    //const layer = new LambdaLayerStack(this, 'LambdaLayerStack');
-    //this.layer = layer;
-
     
     const sessionAPIHandlerFunction = new lambda.Function(scope, 'SessionHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
@@ -69,6 +76,42 @@ export class LambdaFunctionStack extends cdk.Stack {
 
     this.sessionFunction = sessionAPIHandlerFunction;
 
+    const systemPromptsAPIHandlerFunction = new lambda.Function(scope, 'SystemPromptsHandlerFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/system-prompt-handler')), // Points to the lambda directory
+      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "STAGED_SYSTEM_PROMPTS_TABLE" : props.stagedSystemPromptsTable.tableName, 
+        "ACTIVE_SYSTEM_PROMPTS_TABLE" : props.activeSystemPromptsTable.tableName,
+        "DEFAULT_PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
+        You have access to a search tool that you will use to look up answers to questions. You must 
+        respond to the user in the same language as their question. Your goal is to help prospective 
+        students research how courses and programs at specific MA public higher education institutions 
+        can set them up for fulfilling careers. You have knowledge about career outlooks, the day to day 
+        tasks for careers, and the skills required for careers. You also have knowledge about the skills 
+        that courses and programs teach. You only know about Greenfield Community College (GCC), Bridgewater 
+        State University (BSU), and Worcester State University (WSU). You do not have knowledge about and 
+        cannot answer questions about any other institutions. If something is not in your knowledge base, 
+        do not assume it does not exist. Simply inform the user you don't have knowledge of it.`
+       }
+    });
+    // Add permissions to the lambda function to read/write to the table
+    systemPromptsAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'dynamodb:GetItem',
+        'dynamodb:PutItem',
+        'dynamodb:UpdateItem',
+        'dynamodb:DeleteItem',
+        'dynamodb:Query',
+        'dynamodb:Scan'
+      ],
+      resources: [props.activeSystemPromptsTable.tableArn, props.activeSystemPromptsTable.tableArn + "/index/*", props.stagedSystemPromptsTable.tableArn, props.stagedSystemPromptsTable.tableArn + "/index/*"]
+    }));
+    this.systemPromptsFunction = systemPromptsAPIHandlerFunction;
+    props.activeSystemPromptsTable.grantReadWriteData(systemPromptsAPIHandlerFunction);
+    props.stagedSystemPromptsTable.grantReadWriteData(systemPromptsAPIHandlerFunction);
+
         // Define the Lambda function resource
         const websocketAPIFunction = new lambda.Function(scope, 'ChatHandlerFunction', {
           runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
@@ -76,28 +119,9 @@ export class LambdaFunctionStack extends cdk.Stack {
           handler: 'index.handler', // Points to the 'hello' file in the lambda directory
           environment : {
             "WEBSOCKET_API_ENDPOINT" : props.wsApiEndpoint.replace("wss","https"),            
-            "PROMPT" : `You are a helpful AI chatbot that will answer questions based on your knowledge. 
-            You have access to a search tool that you will use to look up answers to questions. You must 
-            respond to the user in the same language as their question. Your goal is to help prospective 
-            students research how courses and programs at specific MA public higher education institutions 
-            can set them up for fulfilling careers. You have knowledge about career outlooks, the day to day 
-            tasks for careers, and the skills required for careers. You also have knowledge about the skills 
-            that courses and programs teach. You only know about Greenfield Community College (GCC), Bridgewater 
-            State University (BSU), and Worcester State University (WSU). You do not have knowledge about and 
-            cannot answer questions about any other institutions. If something is not in your knowledge base, 
-            do not assume it does not exist. Simply inform the user you don't have knowledge of it.`,
             'KB_ID' : props.knowledgeBase.attrKnowledgeBaseId,
-            'CONFL_PROMPT': `You are a knowledge expert looking to either identify conflicts among the 
-            above documents or assure the user that no conflicts exist. You are not looking for small 
-            syntatic or grammatical differences, but rather pointing out major factual inconsistencies. 
-            You can be confident about identifying a conflict between two documents if the conflict 
-            represents a major factual difference that would result in semantic differences between 
-            responses constructed with each respective decoment. If conflicts are detected, please format 
-            them in an organized list where each entry includes the names of the conflicting documents as 
-            well as the conflicting statements. If there is no conflict please respond only with "no 
-            conflicts detected" Do not include any additional information. Only include identified 
-            conflicts that you are confident are factual inconsistencies. Do not include identified 
-            conflicts that you are not confident are real conflicts.`
+            'SESSION_HANDLER' : sessionAPIHandlerFunction.functionName,
+            'SYSTEM_PROMPTS_HANDLER' : systemPromptsAPIHandlerFunction.functionName
           },
           timeout: cdk.Duration.seconds(300)
         });
@@ -123,7 +147,7 @@ export class LambdaFunctionStack extends cdk.Stack {
           actions: [
             'lambda:InvokeFunction'
           ],
-          resources: [this.sessionFunction.functionArn]
+          resources: [this.sessionFunction.functionArn, this.systemPromptsFunction.functionArn]
         }));
         // give permission for cloudwatch to log the function
         websocketAPIFunction.addToRolePolicy(new iam.PolicyStatement({
@@ -199,7 +223,7 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.deleteS3Function = deleteS3APIHandlerFunction;
 
-    const getS3APIHandlerFunction = new lambda.Function(scope, 'GetS3FilesHandlerFunction', {
+    const getS3KnowledgeAPIHandlerFunction = new lambda.Function(scope, 'GetS3KnowledgeFilesHandlerFunction', {
       runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
       code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/get-s3')), // Points to the lambda directory
       handler: 'index.handler', // Points to the 'hello' file in the lambda directory
@@ -209,14 +233,33 @@ export class LambdaFunctionStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30)
     });
 
-    getS3APIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+    getS3KnowledgeAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
         's3:*'
       ],
       resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
     }));
-    this.getS3Function = getS3APIHandlerFunction;
+    this.getS3KnowledgeFunction = getS3KnowledgeAPIHandlerFunction;
+
+    const getS3TestCasesAPIHandlerFunction = new lambda.Function(scope, 'GetS3TestCasesFilesHandlerFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'llm-eval/S3-get-test-cases')), // Points to the lambda directory
+      handler: 'index.handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "BUCKET" : props.evalTestCasesBucket.bucketName,        
+      },
+      timeout: cdk.Duration.seconds(30)
+    });
+
+    getS3TestCasesAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        's3:*'
+      ],
+      resources: [props.evalTestCasesBucket.bucketArn,props.evalTestCasesBucket.bucketArn+"/*"]
+    }));
+    this.getS3TestCasesFunction = getS3TestCasesAPIHandlerFunction;
 
     const kbSyncAPIHandlerFunction = new lambda.Function(scope, 'SyncKBHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
@@ -240,26 +283,7 @@ export class LambdaFunctionStack extends cdk.Stack {
     }));
     this.syncKBFunction = kbSyncAPIHandlerFunction;
 
-    // add S3 notification so index update function is triggered by triggers/aoss_sync.trigger
-    //props.knowledgeBucket.addEventNotification(s3.EventType.OBJECT_CREATED, 
-    //  new s3_notifications.LambdaDestination(ossUpdateIndexFunction), {
-    //    prefix: 'triggers',
-    //    suffix: 'aoss_sync.trigger' 
-    //  }
-    //);
-
-    //const ossUpdateIndexAPIHandlerFunction = new lambda.Function(scope, 'OSSUpdateIndexHandlerFunction', {
-    //  runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
-    //  code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/oss-update-index')), // Points to the lambda directory
-    //  handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
-    //  environment: {
-    //    "KB_ID" : props.knowledgeBase.attrKnowledgeBaseId,      
-    //    "SOURCE" : props.knowledgeBaseSource.attrDataSourceId
-    //  },
-    //  timeout: cdk.Duration.seconds(30)
-    //});
-
-    const uploadS3APIHandlerFunction = new lambda.Function(scope, 'UploadS3FilesHandlerFunction', {
+    const uploadS3KnowledgeAPIHandlerFunction = new lambda.Function(scope, 'UploadS3KnowledgeFilesHandlerFunction', {
       runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
       code: lambda.Code.fromAsset(path.join(__dirname, 'knowledge-management/upload-s3')), // Points to the lambda directory
       handler: 'index.handler', // Points to the 'hello' file in the lambda directory
@@ -269,22 +293,37 @@ export class LambdaFunctionStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30)
     });
 
-    uploadS3APIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+    uploadS3KnowledgeAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
         's3:*'
       ],
       resources: [props.knowledgeBucket.bucketArn,props.knowledgeBucket.bucketArn+"/*"]
     }));
-    this.uploadS3Function = uploadS3APIHandlerFunction;
+    this.uploadS3KnowledgeFunction = uploadS3KnowledgeAPIHandlerFunction;
+
+    const uploadS3TestCasesFunction = new lambda.Function(scope, 'UploadS3TestCasesFilesHandlerFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'llm-eval/S3-upload')), // Points to the lambda directory
+      handler: 'index.handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "BUCKET" : props.evalTestCasesBucket.bucketName,        
+      },
+      timeout: cdk.Duration.seconds(30)
+    });
+
+    uploadS3TestCasesFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        's3:*'
+      ],
+      resources: [props.evalTestCasesBucket.bucketArn,props.evalTestCasesBucket.bucketArn+"/*"]
+    }));
+    this.uploadS3TestCasesFunction = uploadS3TestCasesFunction;
+
 
     // define secret to store O*NET API key
     const onetApiKeySecret = secretsmanager.Secret.fromSecretNameV2(this, 'OnetApiKey', 'ONET_API_Credentials');
-    //const onetApiKeySecret = new secretsmanager.Secret(this, 'OnetApiKey', {
-    //  secretName: 'ONET_API_Credentials',
-    //  description: 'Credentials for O*NET API',
-    //  removalPolicy: cdk.RemovalPolicy.DESTROY
-    //});
 
     const onetDataPullHandlerFunction = new lambda.Function(scope, 'OnetDataPullHandlerFunction', {
       runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
@@ -395,5 +434,39 @@ export class LambdaFunctionStack extends cdk.Stack {
         suffix: ''
       }
     );
+
+    const evalResultsAPIHandlerFunction = new lambda.Function(scope, 'EvalResultsHandlerFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12, // Choose any supported Node.js runtime
+      code: lambda.Code.fromAsset(path.join(__dirname, 'llm-eval/eval-results-handler')), // Points to the lambda directory
+      handler: 'lambda_function.lambda_handler', // Points to the 'hello' file in the lambda directory
+      environment: {
+        "EVALUATION_RESULTS_TABLE" : props.evalResutlsTable.tableName,
+        "EVALUATION_SUMMARIES_TABLE" : props.evalSummariesTable.tableName
+      }
+    });
+    evalResultsAPIHandlerFunction.addToRolePolicy(new iam.PolicyStatement({ 
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'dynamodb:GetItem',
+        'dynamodb:PutItem',
+        'dynamodb:UpdateItem',
+        'dynamodb:DeleteItem',
+        'dynamodb:Query',
+        'dynamodb:Scan'
+      ],
+      resources: [props.evalResutlsTable.tableArn, props.evalResutlsTable.tableArn + "/index/*", props.evalSummariesTable.tableArn, props.evalSummariesTable.tableArn + "/index/*"]
+    }));
+    this.handleEvalResultsFunction = evalResultsAPIHandlerFunction;
+    props.evalResutlsTable.grantReadWriteData(evalResultsAPIHandlerFunction);
+    props.evalSummariesTable.grantReadWriteData(evalResultsAPIHandlerFunction);
+
+    this.stepFunctionsStack = new StepFunctionsStack(scope, 'StepFunctionsStack', {
+      knowledgeBase: props.knowledgeBase,
+      evalSummariesTable: props.evalSummariesTable,
+      evalResutlsTable: props.evalResutlsTable,
+      evalTestCasesBucket: props.evalTestCasesBucket,
+      systemPromptsHandlerName: systemPromptsAPIHandlerFunction.functionName
+    });
+
   }
 }

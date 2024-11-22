@@ -22,6 +22,7 @@
     "@mui/icons-material": "^6.1.8",
     "@types/styled-components": "^5.1.34",
     "aws-amplify": "^5.3.12",
+    "file-saver": "^2.0.5",
     "luxon": "^3.4.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
