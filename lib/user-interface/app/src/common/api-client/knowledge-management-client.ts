@@ -154,7 +154,7 @@ export class KnowledgeManagementClient {
   }
 
   // Sets the system prompt by adding a new prompt into the ddb table
-  async setSystemPrompt(prompt: string) {
+  async setSystemPrompt(prompt: string, prompt_id: string) {
     const auth = await Utils.authenticate();
     const response = await fetch(this.API + '/system-prompts-handler', {
       method: 'POST',
@@ -164,7 +164,8 @@ export class KnowledgeManagementClient {
       },
       body: JSON.stringify({
         "operation": "set_prompt",
-        "prompt": prompt
+        "prompt": prompt,
+        "prompt_id": prompt_id
       })
     })
     if (!response.ok) {

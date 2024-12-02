@@ -22,6 +22,21 @@ function ViewDetailsButton({ evaluationId }) {
   );
 }
 
+function ViewEvalsButton({ promptId }) {
+  const navigate = useNavigate();
+  console.log("promptId: ", promptId);
+
+  const viewPromptEvals = (promptId) => {
+    navigate(`/admin/configuration/${promptId}`);
+  };
+
+  return (
+    <Button onClick={() => viewPromptEvals(promptId)} variant="link">
+      View Evaluations
+    </Button>
+  );
+}
+
 
 const FILES_COLUMN_DEFINITIONS = [
   {
@@ -202,6 +217,27 @@ const PromptColumnDefinitions = [
   },
 ];
 
+const PromptEvalColumnDefinitions = [
+  {
+    id: "prompt",
+    header: "Prompt",
+    cell: (item) => <TruncatedTextCell text={item.Prompt} maxLength={150}/>
+  },
+  {
+    id: "createdAt",
+    header: "Upload date",
+    cell: (item) =>
+      DateTime.fromISO(new Date(item.Timestamp).toISOString()).toLocaleString(
+        DateTime.DATETIME_SHORT
+      ),
+  },
+  {
+    id: "viewEvals",
+    header: "View Evaluations",
+    cell: (item) => <ViewEvalsButton promptId={item.PromptId}/>,
+  }
+];
+
 /** This is exposed as a function because the code that this is based off of
  * originally supported many more distinct file types.
  */
@@ -217,6 +253,8 @@ export function getColumnDefinition(documentType: AdminDataType) {
       return DETAILED_EVAL_COLUMN_DEFINITIONS;
     case "prompt":
       return PromptColumnDefinitions;
+    case "promptEval":
+      return PromptEvalColumnDefinitions;
     default:
       return [];
   }

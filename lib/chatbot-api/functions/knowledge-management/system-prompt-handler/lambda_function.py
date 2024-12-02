@@ -94,9 +94,8 @@ def get_prompts(continuation_token, limit, table):
         }
     
 # function to set a new prompt in DynamoDB
-def add_prompt(prompt, timestamp, table):
+def add_prompt(prompt, prompt_id, timestamp, table):
     try:
-        prompt_id = str(uuid.uuid4())
         response = table.put_item(
             Item={
                 'PartitionKey': 'Prompt',
@@ -118,9 +117,10 @@ def add_prompt(prompt, timestamp, table):
         }
         
 def stage_prompt(prompt, timestamp):
-    return add_prompt(prompt, timestamp, staged_prompts_table)
+    prompt_id = str(uuid.uuid4())
+    return add_prompt(prompt, prompt_id, timestamp, staged_prompts_table)
 
-def set_prompt(prompt, timestamp):
+def set_prompt(prompt, prompt_id, timestamp):
     return add_prompt(prompt, timestamp, active_prompts_table)
 
 def get_active_prompts(continuation_token, limit):
@@ -138,6 +138,7 @@ def lambda_handler(event, context):
     continuation_token = data.get('continuation_token')
     limit = data.get('limit', 10)
     timestamp = str(datetime.now())
+    prompt_id = data.get('prompt_id')
 
     if operation == 'get_active_prompt':
         return get_active_prompt()
@@ -146,7 +147,7 @@ def lambda_handler(event, context):
     elif operation == 'get_active_prompts':
         return get_active_prompts(continuation_token, limit)
     elif operation == 'set_prompt':
-        return set_prompt(prompt, timestamp)
+        return set_prompt(prompt, prompt_id, timestamp)
     elif operation == 'stage_prompt':
         return stage_prompt(prompt, timestamp)
     else:
