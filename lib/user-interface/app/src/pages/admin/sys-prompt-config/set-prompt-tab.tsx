@@ -143,7 +143,7 @@ export default function SetPromptTab(props: SetActivePromptTabProps) {
     if (!selectedItems.length) return;
     setIsSaving(true);
     try {
-      await apiClient.knowledgeManagement.setSystemPrompt(selectedItems[0].Prompt);
+      await apiClient.knowledgeManagement.setSystemPrompt(selectedItems[0].Prompt, selectedItems[0].PromptId);
       addNotification('success', 'Active system prompt set successfully');
       // Clear selection and prompt text
       setSelectedItems([]);

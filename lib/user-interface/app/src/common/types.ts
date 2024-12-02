@@ -30,4 +30,5 @@ export type AdminDataType =
   | "feedback"
   | "evaluationSummary"
   | "detailedEvaluation"
-  | "prompt";
+  | "prompt"
+  | "promptEval";

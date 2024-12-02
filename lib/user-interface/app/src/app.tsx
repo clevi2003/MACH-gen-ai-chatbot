@@ -54,14 +54,11 @@ function App() {
               <Route path="data" element={<DataPage />} />
               <Route path="user-feedback" element={<UserFeedbackPage />} />
               <Route path="configuration" element={<ConfigurationPage />} />
-              <Route path="llm-evaluation" element={<LlmEvaluationPage />}>
-                <Route
-                  path=":evaluationId"
-                  element={
-                    <DetailedEvaluationPage documentType="detailedEvaluation" />
-                  }
-                />
-              </Route>
+              <Route path="llm-evaluation" element={<LlmEvaluationPage />} />
+              <Route
+                path="llm-evaluation/:evaluationId"
+                element={<DetailedEvaluationPage documentType="detailedEvaluation" />}
+              />
             </Route>
 
             {/* FAQ and Guide Routes */}
