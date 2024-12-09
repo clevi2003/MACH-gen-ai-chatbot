@@ -13,14 +13,14 @@ import {
 import { I18nProvider } from '@cloudscape-design/components/i18n';
 import messages from '@cloudscape-design/components/i18n/messages/all.all';
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { ApiClient } from "../../common/api-client/api-client";
-import { AppContext } from "../../common/app-context";
-import { getColumnDefinition } from "./columns";
-import { Utils } from "../../common/utils";
+import { ApiClient } from "../../../common/api-client/api-client";
+import { AppContext } from "../../../common/app-context";
+import { getColumnDefinition } from "../columns";
+import { Utils } from "../../../common/utils";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import React from 'react';
-import { useNotifications } from "../../components/notif-manager";
-import { feedbackCategories } from '../../common/constants'
+import { useNotifications } from "../../../components/notif-manager";
+import { feedbackCategories } from '../../../common/constants'
 
 export interface FeedbackTabProps {
   updateSelectedFeedback: React.Dispatch<any>;

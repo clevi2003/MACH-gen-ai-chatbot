@@ -9,13 +9,13 @@ import {
   Spinner,
 } from "@cloudscape-design/components";
 import { useCallback, useContext, useEffect, useState } from "react";
-import { AdminDataType } from "../../common/types";
-import { ApiClient } from "../../common/api-client/api-client";
-import { AppContext } from "../../common/app-context";
-import { getColumnDefinition } from "./columns";
-import { Utils } from "../../common/utils";
+import { AdminDataType } from "../../../common/types";
+import { ApiClient } from "../../../common/api-client/api-client";
+import { AppContext } from "../../../common/app-context";
+import { getColumnDefinition } from "../columns";
+import { Utils } from "../../../common/utils";
 import { useCollection } from "@cloudscape-design/collection-hooks";
-import { useNotifications } from "../../components/notif-manager";
+import { useNotifications } from "../../../components/notif-manager";
 
 export interface DocumentsTabProps {
   tabChangeFunction: () => void;

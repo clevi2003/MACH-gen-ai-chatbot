@@ -10,11 +10,11 @@ import {
   Heading,
   useTheme,
 } from "@aws-amplify/ui-react";
-import BaseAppLayout from "../../components/base-app-layout";
-import useOnFollow from "../../common/hooks/use-on-follow";
+import BaseAppLayout from "../../../components/base-app-layout";
+import useOnFollow from "../../../common/hooks/use-on-follow";
 import FeedbackTab from "./feedback-tab";
-import FeedbackPanel from "../../components/feedback-panel";
-import { CHATBOT_NAME } from "../../common/constants";
+import FeedbackPanel from "../../../components/feedback-panel";
+import { CHATBOT_NAME } from "../../../common/constants";
 import { useState, useEffect } from "react";
 import { Auth } from "aws-amplify";
 

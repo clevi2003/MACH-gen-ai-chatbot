@@ -9,11 +9,11 @@ import {
   } from "@cloudscape-design/components";
   import useOnFollow from "../../../common/hooks/use-on-follow";
   import BaseAppLayout from "../../../components/base-app-layout";
-  import DocumentsTab from "../documents-tab";
+  import DocumentsTab from "../knowledge-management/documents-tab";
   import { CHATBOT_NAME } from "../../../common/constants";
   import { useState, useEffect, useContext } from "react";
   import { Auth } from "aws-amplify";
-  import DataFileUpload from "../file-upload-tab";
+  import DataFileUpload from "../knowledge-management/file-upload-tab";
   import { ApiClient } from "../../../common/api-client/api-client";
   import { AppContext } from "../../../common/app-context";
   
