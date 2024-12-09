@@ -7,15 +7,15 @@ import {
   Tabs,
   Container
 } from "@cloudscape-design/components";
-import useOnFollow from "../../common/hooks/use-on-follow";
-import BaseAppLayout from "../../components/base-app-layout";
+import useOnFollow from "../../../common/hooks/use-on-follow";
+import BaseAppLayout from "../../../components/base-app-layout";
 import DocumentsTab from "./documents-tab";
-import { CHATBOT_NAME } from "../../common/constants";
+import { CHATBOT_NAME } from "../../../common/constants";
 import { useState, useEffect, useContext } from "react";
 import { Auth } from "aws-amplify";
 import DataFileUpload from "./file-upload-tab";
-import { ApiClient } from "../../common/api-client/api-client";
-import { AppContext } from "../../common/app-context";
+import { ApiClient } from "../../../common/api-client/api-client";
+import { AppContext } from "../../../common/app-context";
 
 export default function DataPage() {
   const onFollow = useOnFollow();

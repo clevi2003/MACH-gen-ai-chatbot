@@ -11,10 +11,10 @@ import {
   SpaceBetween,
 } from "@cloudscape-design/components";
 import { useContext, useState } from "react";
-import { AppContext } from "../../common/app-context";
-import { ApiClient } from "../../common/api-client/api-client";
-import { Utils } from "../../common/utils";
-import { FileUploader } from "../../common/file-uploader";
+import { AppContext } from "../../../common/app-context";
+import { ApiClient } from "../../../common/api-client/api-client";
+import { Utils } from "../../../common/utils";
+import { FileUploader } from "../../../common/file-uploader";
 import { useNavigate } from "react-router-dom";
 
 

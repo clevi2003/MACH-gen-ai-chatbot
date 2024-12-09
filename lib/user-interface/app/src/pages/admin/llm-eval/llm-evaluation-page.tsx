@@ -16,7 +16,7 @@ import {
   import { CHATBOT_NAME } from "../../../common/constants";
   import { useState, useEffect, useContext } from "react";
   import { Auth } from "aws-amplify";
-  import DataFileUpload from "../file-upload-tab";
+  import DataFileUpload from "../knowledge-management/file-upload-tab";
   import { ApiClient } from "../../../common/api-client/api-client";
   import { AppContext } from "../../../common/app-context";
   
