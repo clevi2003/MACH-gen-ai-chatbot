@@ -56,7 +56,6 @@ export class ChatBotApi extends Construct {
         feedbackTable: tables.feedbackTable,
         feedbackBucket: buckets.feedbackBucket,
         knowledgeBucket: buckets.knowledgeBucket,
-        ragasDependenciesBucket: buckets.ragasDependenciesBucket,
         knowledgeBase: knowledgeBase.knowledgeBase,
         knowledgeBaseSource: knowledgeBase.dataSource,
         evalSummariesTable : tables.evalSummaryTable,
